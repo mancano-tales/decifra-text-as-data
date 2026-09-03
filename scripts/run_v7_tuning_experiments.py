@@ -155,10 +155,38 @@ def run_condition(engine, provider, condition_name, codebook_ids, corpus_ids, in
     return run_ids
 
 
+def hypothesis_full_definition(pair_code: str, side_label: str) -> str:
+    """Same shape as scripts/run_v7_candidates_via_agy.py's inline version
+    -- kept identical so a reviewer sees the same rendering of a
+    hypothesis's mechanism/premises regardless of which script produced
+    the row they're looking at. Not a general engine helper (deliberately
+    pilot_v7.py/script-local), since 'render this for a human reviewer'
+    is a reporting concern, not an extraction one."""
+    other_label = "b" if side_label == "a" else "a"
+    pair_def = HYPOTHESIS_DEFINITIONS[pair_code]
+    this_hyp, other_hyp = pair_def[side_label], pair_def[other_label]
+    return (
+        f"{this_hyp['name']}\n"
+        f"Mechanism: {this_hyp['mechanism']}\n"
+        f"Premises: {this_hyp['premises']}\n\n"
+        f"Rival hypothesis in this pair: {other_hyp['name']}\n"
+        f"Rival mechanism: {other_hyp['mechanism']}"
+    )
+
+
 def extraction_rows(engine, run_ids: dict[tuple[str, str], int]) -> pd.DataFrame:
     """document/extraction rows for one condition, keyed by a
     pair_side_fk_id_ev string -- the only key that has meaning across
-    conditions, since raw document_id/run_id are per-condition-local."""
+    conditions, since raw document_id/run_id are per-condition-local.
+
+    Carries the complete hypothesis definition and the complete evidence
+    text alongside every row, not just labels/IDs -- the author's explicit
+    requirement for every spreadsheet this pilot produces (AGENTS.md's
+    "Real-world pilot data" section, "so a human reviewer never has to
+    hunt down source material to check a row"), which the first version
+    of this function failed to carry over from
+    scripts/run_v7_candidates_via_agy.py despite having just read that
+    convention while writing it."""
     rows = []
     with Session(engine) as session:
         for (pair_code, side_label), run_id in run_ids.items():
@@ -172,8 +200,14 @@ def extraction_rows(engine, run_ids: dict[tuple[str, str], int]) -> pd.DataFrame
                         "pair": pair_code,
                         "side": side_label,
                         "fk_id_ev": meta["fk_id_ev"],
+                        "title": meta["title"],
+                        "full_evidence_text": doc.text,
+                        "hypothesis_full_definition": hypothesis_full_definition(pair_code, side_label),
                         "categoria": ext.categoria,
                         "justificativa": ext.justificativa,
+                        "trecho_evidencia": ext.trecho_evidencia,
+                        "prompt_sent": ext.prompt_sent,
+                        "raw_response": ext.raw_response,
                     }
                 )
     return pd.DataFrame(rows)
@@ -182,32 +216,37 @@ def extraction_rows(engine, run_ids: dict[tuple[str, str], int]) -> pd.DataFrame
 def run_joint_condition(docs, provider) -> pd.DataFrame:
     """Condition D: one call per candidate (not per side), scoring both
     hypothesis sides at once. Returns a dataframe with the same
-    pair_side_fk_id_ev key shape as extraction_rows, so it can be
-    compared against A/B/C's categoria column directly with the same
-    reproducibility_report() machinery, one row per side per candidate."""
+    pair_side_fk_id_ev key shape as extraction_rows (including the same
+    full-text/full-definition/audit-trail columns), one row per side per
+    candidate, so it can be compared against A/B/C's categoria column
+    directly with the same reproducibility_report() machinery."""
     rows = []
     for fk_id_ev, pair_code in ASSIGNMENTS:
-        text = docs[fk_id_ev]["complete_evidence_content"]
+        d = docs[fk_id_ev]
+        text = d["complete_evidence_content"]
         messages, schema = build_joint_hypothesis_messages_and_schema(pair_code, text)
         print(f"--- [joint] {pair_code} {fk_id_ev} ---", flush=True)
         t0 = time.time()
         try:
             result = provider.extract(messages, schema)
             parsed = result.parsed
-            rows.append(
-                {
-                    "key": f"{pair_code}_a_{fk_id_ev}",
-                    "pair": pair_code, "side": "a", "fk_id_ev": fk_id_ev,
-                    "categoria": parsed.categoria_a, "justificativa": parsed.justificativa_a,
-                }
-            )
-            rows.append(
-                {
-                    "key": f"{pair_code}_b_{fk_id_ev}",
-                    "pair": pair_code, "side": "b", "fk_id_ev": fk_id_ev,
-                    "categoria": parsed.categoria_b, "justificativa": parsed.justificativa_b,
-                }
-            )
+            for side_label, categoria, justificativa, trecho in (
+                ("a", parsed.categoria_a, parsed.justificativa_a, parsed.trecho_evidencia_a),
+                ("b", parsed.categoria_b, parsed.justificativa_b, parsed.trecho_evidencia_b),
+            ):
+                rows.append(
+                    {
+                        "key": f"{pair_code}_{side_label}_{fk_id_ev}",
+                        "pair": pair_code, "side": side_label, "fk_id_ev": fk_id_ev,
+                        "title": d["evidence_title"],
+                        "full_evidence_text": text,
+                        "hypothesis_full_definition": hypothesis_full_definition(pair_code, side_label),
+                        "categoria": categoria, "justificativa": justificativa,
+                        "trecho_evidencia": trecho,
+                        "prompt_sent": json.dumps(messages, ensure_ascii=False),
+                        "raw_response": result.raw_response,
+                    }
+                )
         except Exception as exc:  # noqa: BLE001 -- report and continue to the next candidate
             print(f"  {fk_id_ev} raised: {exc}")
         print(f"  done in {time.time() - t0:.1f}s", flush=True)
