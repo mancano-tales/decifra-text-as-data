@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from threading import Lock
 from typing import Literal
 
 import pandas as pd
@@ -52,11 +53,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_engine = get_engine()
+# Importing the API must not create or migrate the user's database. Tests
+# override this dependency; runtime initializes it once, on first use.
+_engine = None
+_engine_lock = Lock()
 
 
 def get_engine_dependency():
-    return _engine
+    global _engine
+    with _engine_lock:
+        if _engine is None:
+            _engine = get_engine()
+        return _engine
 
 
 class CreateRunRequest(BaseModel):

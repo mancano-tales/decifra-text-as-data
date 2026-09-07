@@ -22,9 +22,9 @@ own generic idea of the concept.
 Decifra is a local-first tool: you author a codebook (a concept,
 its categories, definitions, examples, boundary notes), point it at a text
 corpus, and the software calls an LLM to fill in a structured results table —
-one category, one rationale, one quoted evidence span per document. Every
-result carries a full audit trail: the exact prompt sent, the raw response
-received, which model and provider mode produced it.
+one category, one rationale, one quoted evidence span per document. Results record the prompt, model, provider mode and response (full CLI
+stdout or serialized parsed API JSON). Historical reporting and manual-edit
+provenance still need work; see the repository status report.
 
 It is **not** a manual qualitative-coding tool — [Taguette](https://www.taguette.org/),
 [QualCoder](https://github.com/ccbogel/QualCoder), and
@@ -70,19 +70,20 @@ both, and the before/after is verifiable, not just asserted.
 
 ## Current status
 
-Decifra is pre-1.0, under active development. As of this page:
+Decifra is a functional alpha. The five workflow stages exist, but cost
+estimation and document-file import in the UI are still missing from the
+original MVP acceptance checklist. As of 2026-09-07:
 
-- **Corpus import** — CSV/XLSX/pasted text, with column mapping.
-- **Codebook editor** — structured form with a live YAML preview.
+- **Corpus import** — CSV/XLSX/pasted text in the UI; TXT/Markdown/DOCX/textual PDF through the backend.
+- **Codebook editor** — structured form with a YAML preview after saving.
 - **Runs** — kick off an extraction against a corpus + codebook, watch it
   progress, pick API-key mode (schema enforced via
   [`instructor`](https://github.com/jxnl/instructor)) or CLI mode
   (any installed CLI you already have a subscription for).
 - **Results** — browsable table, inline edits, CSV/XLSX/JSON export, and a
-  per-run [GUIDE-LLM](https://llm-checklist.com/)-shaped AI-use disclosure
-  report.
-- **Validation** — gold-label import (including round-tripping with
-  QualiLab), Cohen's kappa, precision/recall/F1 per category.
+  backend [GUIDE-LLM](https://llm-checklist.com/)-shaped report scaffold
+  whose historical provenance and validation text still need work.
+- **Validation** — gold-label CSV import (QualiLab interop is available through the backend), Cohen's kappa, precision/recall/F1 per category.
 
 See [How It Works](how-it-works.qmd) for the pipeline end to end, and
 [Architecture](architecture.qmd) for the technical design and why it looks

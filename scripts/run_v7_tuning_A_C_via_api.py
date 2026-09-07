@@ -82,7 +82,7 @@ def run_via_api(client: httpx.Client, condition_name: str, codebook_ids, corpus_
             json={
                 "codebook_id": codebook_id,
                 "corpus_id": corpus_ids[pair_code],
-                "model": f"agy-gemini-api-{condition_name}",
+                "model": "agy-gemini-api",
                 "provider_mode": "cli",
                 "cli_command": ["agy", "-p"],
                 "cli_prompt_mode": "arg",
@@ -175,6 +175,7 @@ def main() -> None:
 
     combined = pd.concat([df_a.assign(condition="A_baseline_api"), df_c.assign(condition="C_repeat_api")], ignore_index=True)
     out_csv = Path("data/v7_tuning_A_C_via_api_results.csv")
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(out_csv, index=False, encoding="utf-8-sig")
     print(f"Wrote {len(combined)} rows to {out_csv}")
 

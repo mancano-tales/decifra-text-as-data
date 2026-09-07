@@ -12,6 +12,16 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 BACKEND_PORT="${1:-8000}"
 FRONTEND_PORT="${2:-5173}"
+export VITE_API_BASE="http://localhost:${BACKEND_PORT}"
+
+if [[ -x .venv/bin/python ]]; then
+  PYTHON=.venv/bin/python
+elif [[ -x .venv/Scripts/python.exe ]]; then
+  PYTHON=.venv/Scripts/python.exe
+else
+  echo "Create this checkout's .venv and install .[dev] first." >&2
+  exit 1
+fi
 
 PIDS=()
 cleanup() {
@@ -24,7 +34,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 echo "Starting backend on http://localhost:${BACKEND_PORT} ..."
-python -m uvicorn text_as_data.app:app --port "$BACKEND_PORT" &
+"$PYTHON" -m uvicorn text_as_data.app:app --port "$BACKEND_PORT" &
 PIDS+=($!)
 
 echo "Starting frontend on http://localhost:${FRONTEND_PORT} ..."

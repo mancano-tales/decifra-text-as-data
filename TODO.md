@@ -2,6 +2,8 @@
 
 ## Pending
 
+- 2026-09-07 — Verified alpha, not complete MVP acceptance. Priorities: cost estimate, document import UI, settings/entry point, run recovery, and version-aware scientific audit. See `docs/MVP_STATUS.md` for evidence and remaining work.
+
 - 2026-09-03 â€” Product renamed Cifra â†’ Decifra; GitHub repo is now
   `mancano-tales/decifra-text-as-data` (see `NEWS.md` for the full list of
   files touched). The local working directory on this machine still reads
@@ -71,6 +73,8 @@
   until this is fixed properly.
 
 ## Done
+
+- 2026-09-07 — Consolidated V7 experiments and multi-variable design history; preserved untracked research/provider specs. Corrected both READMEs/site (R0.1), lazy database initialization and dev launchers. Verified 259 tests, frontend lint/build, HTTP workflow and one live CLI classification. See `docs/MVP_STATUS.md`.
 
 - 2026-09-03 â€” V7 pipeline tuning items 2, 4, 5 measured/resolved with
   real `agy` runs against the real 16-candidate set (112 real LLM calls;

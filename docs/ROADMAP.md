@@ -34,7 +34,9 @@ Status legend: `[ ]` not started, `[~]` in progress (write the session id),
 
 ## Phase 0 — Truth in the front door
 
-### R0.1 `[ ]` Rewrite both READMEs to match what exists
+### R0.1 `[x]` Rewrite both READMEs to match what exists
+
+Completed 2026-09-07 in the consolidation commit adding `docs/MVP_STATUS.md` (resolve with `git log -1 -- docs/MVP_STATUS.md`).
 
 **Depends on**: nothing. **Size**: hours. **Spec first**: no.
 
@@ -66,7 +68,9 @@ component, or function you can point to.
 
 ## Phase 1 — Generalize the contract before anyone has data files
 
-### R1.1 `[ ]` Multi-variable codebooks with neutral field names
+### R1.1 `[~]` Multi-variable codebooks with neutral field names
+
+2026-09-07 consolidation: design revisions preserved in merge `73cf3de`; implementation not started. Session `01a0798d-ac03-7570-b17c-31f5dcdff1e1`. Author sign-off still required before implementation.
 
 **Depends on**: nothing (do it before R2.x so nothing else has to migrate
 twice). **Size**: the largest item on this list; multi-day.

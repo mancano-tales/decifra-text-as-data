@@ -52,7 +52,7 @@
     "selectCodebook": "Selecione um codebook...",
     "model": "Modelo",
     "providerMode": "Provedor",
-    "providerApiKey": "Chave de API (Anthropic)",
+    "providerApiKey": "Chave de API (Anthropic / OpenAI)",
     "providerCli": "CLI",
     "cliCommand": "Comando CLI (ex: claude -p)",
     "cliPromptMode": "Envio do prompt",

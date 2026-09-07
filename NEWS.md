@@ -1,5 +1,11 @@
 # NEWS
 
+## 2026-09-07
+
+- Consolidated outstanding experiment/design history and preserved local research specs. Corrected alpha/MVP claims in both READMEs and the site; documented measured checks and gaps in `docs/MVP_STATUS.md`.
+- Removed database writes at app import and serialized lazy initialization; added regression coverage. Repaired development environment/port selection and Windows process cleanup. Full suite: 259 passed; frontend lint/build passed with three existing warnings; HTTP and live CLI smoke checks passed.
+- Learning: use isolated temporary directories and distinguish authentication/sandbox failures from product failures. A successful synthetic classification is not a scientific accuracy estimate.
+
 ## 2026-09-03 (1)
 
 - Product renamed from **Cifra** to **Decifra** (author decision), because

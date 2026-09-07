@@ -1,40 +1,48 @@
-# Start the Decifra backend (FastAPI/uvicorn) and frontend (Vite) together with
-# one command, for local development. Not a replacement for real packaging
-# (see AGENTS.md's Phase 2 plan) -- just removes the "two terminals" step
-# from the manual dev workflow documented in README.md.
-#
-# Usage: powershell -File scripts/dev.ps1 [-BackendPort 8000] [-FrontendPort 5173]
-
+# Start both local development servers from this checkout's own environment.
 param(
     [int]$BackendPort = 8000,
     [int]$FrontendPort = 5173
 )
-
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-Set-Location $repoRoot
-
-Write-Host "Starting backend on http://localhost:$BackendPort ..."
-$backend = Start-Process -PassThru -NoNewWindow -FilePath "python" `
-    -ArgumentList "-m", "uvicorn", "text_as_data.app:app", "--port", "$BackendPort"
-
-Write-Host "Starting frontend on http://localhost:$FrontendPort ..."
-$frontend = Start-Process -PassThru -NoNewWindow -FilePath "npm" `
-    -ArgumentList "run", "dev", "--", "--port", "$FrontendPort", "--strictPort" `
-    -WorkingDirectory (Join-Path $repoRoot "frontend")
-
-Write-Host ""
-Write-Host "Decifra is starting up:"
-Write-Host "  Backend:  http://localhost:$BackendPort"
-Write-Host "  Frontend: http://localhost:$FrontendPort"
-Write-Host ""
-Write-Host "Press Ctrl+C to stop both."
-
+$python = Join-Path $repoRoot '.venv/Scripts/python.exe'
+$vite = Join-Path $repoRoot 'frontend/node_modules/vite/bin/vite.js'
+if (!(Test-Path -LiteralPath $python)) { throw "Create this checkout's .venv and install .[dev] first." }
+if (!(Test-Path -LiteralPath $vite)) { throw "Run npm ci in frontend first." }
+$node = (Get-Command node -ErrorAction Stop).Source
+$logDir = Join-Path $repoRoot 'data/dev-logs'
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
+$oldApiBase = $env:VITE_API_BASE
+$env:VITE_API_BASE = "http://localhost:$BackendPort"
+$backend = $null
+$frontend = $null
 try {
-    Wait-Process -Id $backend.Id, $frontend.Id
+    $backend = Start-Process -PassThru -WindowStyle Hidden -FilePath $python `
+        -ArgumentList '-m', 'uvicorn', 'text_as_data.app:app', '--port', "$BackendPort" `
+        -WorkingDirectory $repoRoot `
+        -RedirectStandardOutput (Join-Path $logDir "$stamp-backend.log") `
+        -RedirectStandardError (Join-Path $logDir "$stamp-backend-error.log")
+    $frontend = Start-Process -PassThru -WindowStyle Hidden -FilePath $node `
+        -ArgumentList "`"$vite`"", '--port', "$FrontendPort", '--strictPort' `
+        -WorkingDirectory (Join-Path $repoRoot 'frontend') `
+        -RedirectStandardOutput (Join-Path $logDir "$stamp-frontend.log") `
+        -RedirectStandardError (Join-Path $logDir "$stamp-frontend-error.log")
+    Write-Host "Decifra backend: http://localhost:$BackendPort"
+    Write-Host "Decifra frontend: http://localhost:$FrontendPort"
+    Write-Host "Logs: $logDir"
+    Write-Host 'Press Ctrl+C to stop both servers.'
+    while (!$backend.HasExited -and !$frontend.HasExited) {
+        Start-Sleep -Milliseconds 300
+        $backend.Refresh()
+        $frontend.Refresh()
+    }
+    throw "A development server exited. Check the logs in $logDir."
 } finally {
-    Write-Host ""
-    Write-Host "Stopping Decifra..."
-    Stop-Process -Id $backend.Id -ErrorAction SilentlyContinue
-    Stop-Process -Id $frontend.Id -ErrorAction SilentlyContinue
+    foreach ($server in @($frontend, $backend)) {
+        if ($null -ne $server -and !$server.HasExited) {
+            Stop-Process -Id $server.Id -ErrorAction SilentlyContinue
+        }
+    }
+    $env:VITE_API_BASE = $oldApiBase
 }

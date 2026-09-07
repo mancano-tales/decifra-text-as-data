@@ -6,7 +6,11 @@
 
 It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). You define a codebook, point it at a corpus, and Decifra runs the LLM over every document and fills an output table automatically.
 
-**Status:** MVP complete — all five screens exist (Corpus, Codebook, Runs, Results, Validation). No packaged installer yet; running Decifra today requires starting two dev servers from a terminal (see "Running it" below).
+**Status:** functional alpha — all five workflow stages exist, but the original MVP acceptance checklist is not complete. The UI has three tabs (Corpus, Codebook, Runs), with Results and Validation inside Runs. Cost estimation and document-file upload in the UI remain open. No packaged installer yet; running Decifra today requires starting two dev servers from a terminal (see "Running it" below).
+
+For researchers, organizational analysts, data journalists, and NGOs who need categorical data from text with explicit coding rules and inspectable results. The application and database run locally; text is sent to the selected provider when using a remote model.
+
+See [MVP status and consolidation evidence](docs/MVP_STATUS.md) for verified capabilities, remaining tasks, and testing limits.
 
 ---
 
@@ -22,26 +26,29 @@ LLM text classification risks **construct validity**: does the model actually ap
 - **Two LLM provider modes** (`text_as_data.providers`):
   - **API-key mode**: `instructor`-enforced structured output over the Anthropic or OpenAI SDKs — the reliable path.
   - **CLI mode**: shells out to an already-installed, already-authenticated CLI (`claude -p`, `agy -p`, or a similar tool) instead of a metered API key. Best-effort — the schema is requested in the prompt and the JSON response is parsed, with retry on malformed output.
-- **FastAPI backend + SQLite** (`text_as_data.app`, `text_as_data.db`): caches an extraction per (document, codebook hash, model) so re-running a batch doesn't re-pay for documents already coded; retries a failing document up to 3 times and records the error instead of crashing the run. Every extraction persists the exact prompt sent and the raw LLM response for auditability.
-- **Validation** (`text_as_data.validation`): `agreement_report()` computes per-category accuracy, Cohen's kappa, precision, recall, and F1 against a human-coded gold set, and returns the list of disagreements for manual inspection.
-- **Frontend** (`frontend/`, Vite + React + TypeScript): five screens — Corpus (paste text, or upload CSV/XLSX), Codebook (structured form + YAML preview), Runs (start a run, watch progress), Results (browse the output table, export CSV), and Validation (upload gold labels, view agreement metrics and disagreements). Bilingual PT-BR/EN.
-- **QualiLab interop** (`text_as_data.qualilab_interop`): import `.qualilab` packages as a gold-label source for the validation step.
-- **Disclosure** (`text_as_data.disclosure`): generates a structured methods-section report for a completed run — what model, what codebook, what prompt, what reproducibility rate.
+- **FastAPI backend + SQLite** (`text_as_data.app`, `text_as_data.db`): caches an extraction per (document, codebook hash, model) so re-running a batch doesn't re-pay for documents already coded; retries a failing document up to 3 times and records the error instead of crashing the run. Each extraction stores the prompt and response: full stdout in CLI mode, serialized parsed JSON in API-key mode (not the complete raw API envelope).
+- **Validation** (`text_as_data.validation`): `agreement_report()` computes overall accuracy and Cohen's kappa, plus per-category precision, recall, and F1 against a human-coded gold set, and returns the list of disagreements for manual inspection.
+- **Frontend** (`frontend/`, Vite + React + TypeScript): five workflow stages across three tabs — Corpus (paste text, or upload CSV/XLSX), Codebook (structured form + YAML preview), Runs (start a run, watch progress), Results (browse/filter/edit the output table, export CSV/XLSX/JSON), and Validation (upload gold labels, view agreement metrics and disagreements). Bilingual PT-BR/EN.
+- **Additional backend imports**: TXT/Markdown/DOCX/textual PDF via `POST /corpora/documents` (no OCR), plus QualiLab corpus/gold-label import and result export. These operations do not yet have dedicated UI forms.
+- **Evidence and reproducibility**: source-quote verification is persisted in results/exports. `GET /runs/{id}/reproducibility?compare_to={id}` compares repeated runs; create the repeat with `bypass_cache: true`. These backend features do not have dedicated UI controls.
+- **Disclosure** (`text_as_data.disclosure`): a backend methods-report scaffold. Some text is stale, and it reads the current codebook/checkout; it is not a complete historical validation or reproducibility report.
 
-**Not built yet:** TXT/DOCX/PDF corpus import. Packaged installer. Token cost estimate before running a batch. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Support for providers beyond Anthropic and OpenAI (no Gemini, no local/Ollama endpoints yet). Credential entry in the UI (today, API keys are read from environment variables).
+**Not built yet:** TXT/DOCX/PDF upload in the UI (parsing and upload endpoint already exist). Multi-variable codebooks (design only). Cancel/resume and startup recovery of interrupted runs. Delete controls. Packaged installer. Token cost estimate before running a batch. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Direct API integrations beyond Anthropic and OpenAI (Gemini has been exercised through an external CLI; no native Gemini or local/Ollama integration). Credential entry in the UI (today, API keys are read from environment variables).
 
 ---
 
 ## Installation (development)
 
 ```bash
-pip install -e ".[dev]"
-cd frontend && npm install && cd ..
+python -m venv .venv
+# Activate .venv/bin/activate on Unix or .venv/Scripts/Activate.ps1 in PowerShell.
+python -m pip install -e ".[dev]"
+cd frontend && npm ci && cd ..
 ```
 
 You'll also need either an `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` environment variable (for API-key mode), or an already-installed, already-authenticated CLI like `claude` or `agy` (for CLI mode).
 
-> **Note (multi-worktree environments):** `pip install -e .` registers the editable install globally, pointing to whichever checkout ran it last. If you have multiple worktrees, run the suite as `PYTHONPATH=src pytest` to bypass the editable install and hit the right source. See [`docs/MULTI_AGENT_WORKTREES.md`](docs/MULTI_AGENT_WORKTREES.md) for details.
+> **Note (multi-worktree environments):** An editable install points to a checkout within the Python environment used for installation. Sharing that environment across worktrees silently changes the import target. Use one `.venv` per worktree. If you have multiple worktrees, run the suite as `PYTHONPATH=src pytest` to bypass the editable install and hit the right source. See [`docs/MULTI_AGENT_WORKTREES.md`](docs/MULTI_AGENT_WORKTREES.md) for details.
 
 ---
 
@@ -98,7 +105,7 @@ texts = pd.DataFrame({"id": [1], "text": ["About 200 people occupied the square.
 predicted = extract(texts, codebook, client, model="claude-sonnet-5")
 ```
 
-`extract()` is the lower-level building block the FastAPI backend is implemented on top of, useful mainly for one-off scripts. Use the backend if you want caching, retry, and CLI-mode support.
+`extract()` is a lightweight standalone Python helper; the backend uses `run_extraction()` for the persistent workflow. Use the backend if you want caching, retry, and CLI-mode support.
 
 ### 3. Or drive it through the backend
 
@@ -128,7 +135,7 @@ curl http://localhost:8000/runs/1/results
 PYTHONPATH=src pytest
 ```
 
-Runs 238 tests across the codebook engine, both provider modes, the SQLite models, the FastAPI endpoints, corpus import parsing, QualiLab interop, validation metrics, and the disclosure module.
+Runs the backend test suite across the codebook engine, both provider modes, the SQLite models, the FastAPI endpoints, corpus import parsing, QualiLab interop, validation metrics, and the disclosure module.
 
 ---
 
