@@ -1,5 +1,11 @@
 # NEWS
 
+## 2026-09-07 (MVP handoff)
+
+- Added document-file import UI, persisted provider defaults and OS-keyring credentials, approximate token/cache estimates, optional user-entered prices, and a single-server CLI with a built frontend.
+- Exposed evidence and prompt/response records, highlighted per-document errors, preserved pre-review answers and excluded reviewed rows from automatic cache. Scoped validation coverage to the current corpus and recorded SDK-reported token usage.
+- Verified the full suite and production frontend build; three synthetic documents classified through the real CLI from the browser, with verified evidence in all three. See `docs/MVP_TEST_GUIDE.md` for handoff and limits.
+
 ## 2026-09-07
 
 - Consolidated outstanding experiment/design history and preserved local research specs. Corrected alpha/MVP claims in both READMEs and the site; documented measured checks and gaps in `docs/MVP_STATUS.md`.

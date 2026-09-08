@@ -502,3 +502,12 @@ input[type="file"] {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Keep long evidence and audit text readable without widening the page. */
+.results-table { table-layout: fixed; }
+.results-table td { overflow-wrap: anywhere; }
+.results-table pre { white-space: pre-wrap; max-height: 22rem; overflow: auto; font-size: 11px; }
+.results-table blockquote { margin: 0 0 8px; padding-left: 8px; border-left: 2px solid var(--accent); }
+.results-table summary { cursor: pointer; margin-top: 10px; }
+.estimate-panel { margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
+input[type="checkbox"] { width: auto; margin-right: 8px; }

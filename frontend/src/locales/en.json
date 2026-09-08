@@ -21,7 +21,10 @@
     "xlsxTitle": "Upload XLSX",
     "textColumn": "Text column",
     "file": "File",
-    "upload": "Upload"
+    "upload": "Upload",
+    "documentsTitle": "Import documents",
+    "documentsHelp": "TXT, Markdown, DOCX or text-based PDF. One file per document; scanned PDFs require OCR elsewhere.",
+    "imported": "Imported {{count}} documents."
   },
   "codebook": {
     "listTitle": "Codebooks",
@@ -74,7 +77,24 @@
     "modelRequired": "Model cannot be empty.",
     "cliCommandRequired": "CLI command cannot be empty.",
     "unknownCategory": "{{value}} (not a current codebook label)",
-    "noResults": "No results match this filter."
+    "noResults": "No results match this filter.",
+    "bypassCache": " Run fresh (ignore cache)",
+    "configureFirst": "Configure your API key in Settings, or choose CLI.",
+    "estimateTitle": "Before you start",
+    "estimateButton": "Estimate usage",
+    "estimateCounts": "{{documents}} documents · {{cached_documents}} cached · {{new_documents}} new calls",
+    "estimateTokens": "≈ {{input_tokens}} input tokens + {{output_tokens}} output tokens",
+    "priceUnavailable": "Monetary estimate unavailable. CLI billing depends on your subscription; API rates can be entered in Settings.",
+    "estimatePrice": "≈ US$ {{price}} using your configured rates",
+    "estimateDisclaimer": "Approximation from prompt length (characters/4), including schema. Output is an assumption; retries can increase usage. This is not a spending cap.",
+    "documentErrors": "{{count}} documents failed. Review the __error__ rows before using or exporting these results.",
+    "evidence": "Evidence",
+    "evidenceVerified": "Found in source",
+    "evidenceUnverified": "Not verified — review",
+    "audit": "Inspect prompt and response",
+    "prompt": "Prompt sent",
+    "response": "Recorded response",
+    "original": "Original before review"
   },
   "validation": {
     "title": "Validate",
@@ -99,5 +119,21 @@
     "server": "Server error",
     "unknown": "Something went wrong",
     "details": "Details"
+  },
+  "settings": {
+    "title": "Settings",
+    "loading": "Loading settings…",
+    "help": "Choose the defaults for your next runs. For CLI, the installed tool must already be authenticated.",
+    "keyHelp": "Keys are stored in the operating system credential vault. Leave fields untouched to keep existing keys. Environment variables take precedence.",
+    "configured": "Configured",
+    "missing": "Not configured",
+    "removeKey": "Remove saved key",
+    "removePending": "Will be removed when saved.",
+    "estimate": "Usage estimate",
+    "priceHelp": "Optional: enter your model’s USD price per million tokens. These are your rates, not automatically verified vendor prices.",
+    "outputBudget": "Assumed output tokens per document",
+    "input_usd_per_million": "Input: USD per million tokens",
+    "output_usd_per_million": "Output: USD per million tokens",
+    "saved": "Settings saved."
   }
 }

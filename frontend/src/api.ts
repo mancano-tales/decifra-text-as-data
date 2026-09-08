@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export class ApiError extends Error {
   status: number;
@@ -163,6 +163,11 @@ export interface ExtractionResult {
   trecho_evidencia: string;
   tokens_used: number | null;
   document_snippet: string;
+  evidence_verified: boolean;
+  evidence_match_tier: string;
+  prompt_sent: string;
+  raw_response: string;
+  original_result_json: string;
 }
 
 export interface CreateRunRequest {
@@ -172,6 +177,7 @@ export interface CreateRunRequest {
   provider_mode: "api_key" | "cli";
   cli_command?: string[];
   cli_prompt_mode?: "stdin" | "arg";
+  bypass_cache?: boolean;
 }
 
 export async function listRuns(): Promise<RunSummary[]> {
@@ -253,3 +259,29 @@ export async function getRunValidation(runId: number): Promise<ValidationReport>
   const response = await fetch(`${API_BASE}/runs/${runId}/validation`);
   return handleResponse(response);
 }
+
+export async function createCorpusFromDocuments(name: string, files: File[]): Promise<CorpusSummary> {
+  const data = new FormData(); data.append("name", name);
+  files.forEach(file => data.append("files", file));
+  return handleResponse(await fetch(`${API_BASE}/corpora/documents`, {method: "POST", body: data}));
+}
+
+export interface Settings {
+  model: string;
+  provider_mode: "api_key" | "cli";
+  cli_command: string;
+  cli_prompt_mode: "stdin" | "arg";
+  output_tokens_per_document: number;
+  input_usd_per_million: number | null;
+  output_usd_per_million: number | null;
+  credentials: Record<string, {configured: boolean; source: string}>;
+}
+export const getSettings = async (): Promise<Settings> => handleResponse(await fetch(`${API_BASE}/settings`));
+export const putSettings = async (settings: Settings, keys: Record<string, string>): Promise<Settings> =>
+  handleResponse(await fetch(`${API_BASE}/settings`, {method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify({...settings, ...keys})}));
+export interface RunEstimate {
+  documents: number; cached_documents: number; new_documents: number;
+  input_tokens: number; output_tokens: number; estimated_usd: number | null;
+}
+export const estimateRun = async (request: CreateRunRequest): Promise<RunEstimate> =>
+  handleResponse(await fetch(`${API_BASE}/runs/estimate`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(request)}));

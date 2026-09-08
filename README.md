@@ -6,7 +6,7 @@
 
 It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). You define a codebook, point it at a corpus, and Decifra runs the LLM over every document and fills an output table automatically.
 
-**Status:** functional alpha — all five workflow stages exist, but the original MVP acceptance checklist is not complete. The UI has three tabs (Corpus, Codebook, Runs), with Results and Validation inside Runs. Cost estimation and document-file upload in the UI remain open. No packaged installer yet; running Decifra today requires starting two dev servers from a terminal (see "Running it" below).
+**Status:** functional single-variable MVP for a supervised pilot. The UI has four tabs (Corpus, Codebook, Runs, Settings); results and validation live inside Runs. Document upload, approximate pre-run token estimates, saved provider settings, evidence inspection and a single local server are implemented. No packaged installer yet. See the [test guide](docs/MVP_TEST_GUIDE.md).
 
 For researchers, organizational analysts, data journalists, and NGOs who need categorical data from text with explicit coding rules and inspectable results. The application and database run locally; text is sent to the selected provider when using a remote model.
 
@@ -28,12 +28,13 @@ LLM text classification risks **construct validity**: does the model actually ap
   - **CLI mode**: shells out to an already-installed, already-authenticated CLI (`claude -p`, `agy -p`, or a similar tool) instead of a metered API key. Best-effort — the schema is requested in the prompt and the JSON response is parsed, with retry on malformed output.
 - **FastAPI backend + SQLite** (`text_as_data.app`, `text_as_data.db`): caches an extraction per (document, codebook hash, model) so re-running a batch doesn't re-pay for documents already coded; retries a failing document up to 3 times and records the error instead of crashing the run. Each extraction stores the prompt and response: full stdout in CLI mode, serialized parsed JSON in API-key mode (not the complete raw API envelope).
 - **Validation** (`text_as_data.validation`): `agreement_report()` computes overall accuracy and Cohen's kappa, plus per-category precision, recall, and F1 against a human-coded gold set, and returns the list of disagreements for manual inspection.
-- **Frontend** (`frontend/`, Vite + React + TypeScript): five workflow stages across three tabs — Corpus (paste text, or upload CSV/XLSX), Codebook (structured form + YAML preview), Runs (start a run, watch progress), Results (browse/filter/edit the output table, export CSV/XLSX/JSON), and Validation (upload gold labels, view agreement metrics and disagreements). Bilingual PT-BR/EN.
-- **Additional backend imports**: TXT/Markdown/DOCX/textual PDF via `POST /corpora/documents` (no OCR), plus QualiLab corpus/gold-label import and result export. These operations do not yet have dedicated UI forms.
-- **Evidence and reproducibility**: source-quote verification is persisted in results/exports. `GET /runs/{id}/reproducibility?compare_to={id}` compares repeated runs; create the repeat with `bypass_cache: true`. These backend features do not have dedicated UI controls.
+- **Frontend** (`frontend/`, Vite + React + TypeScript): five workflow stages plus Settings — Corpus (paste text, or upload CSV/XLSX/TXT/Markdown/DOCX/text PDF), Codebook (structured form + YAML preview), Runs (start a run, watch progress), Results (browse/filter/edit the output table, export CSV/XLSX/JSON), and Validation (upload gold labels, view agreement metrics and disagreements). Bilingual PT-BR/EN.
+- **Additional backend imports**: QualiLab corpus/gold-label import and result export remain API-only. Document upload now has a UI form (no OCR).
+- **Settings and estimates**: OS-keyring API credentials, persisted run defaults, approximate prompt/schema token counts, cache counts, optional user-entered USD rates, and SDK-reported token usage when available. Estimates exclude possible retry costs.
+- **Evidence and reproducibility**: source-quote verification is persisted in results/exports. `GET /runs/{id}/reproducibility?compare_to={id}` compares repeated runs; create the repeat with `bypass_cache: true`. The UI displays quotations and verification, exposes prompt/response details, and offers an ignore-cache checkbox. The run-comparison report remains API-only.
 - **Disclosure** (`text_as_data.disclosure`): a backend methods-report scaffold. Some text is stale, and it reads the current codebook/checkout; it is not a complete historical validation or reproducibility report.
 
-**Not built yet:** TXT/DOCX/PDF upload in the UI (parsing and upload endpoint already exist). Multi-variable codebooks (design only). Cancel/resume and startup recovery of interrupted runs. Delete controls. Packaged installer. Token cost estimate before running a batch. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Direct API integrations beyond Anthropic and OpenAI (Gemini has been exercised through an external CLI; no native Gemini or local/Ollama integration). Credential entry in the UI (today, API keys are read from environment variables).
+**Not built yet:** Multi-variable codebooks (design only). Cancel/resume and startup recovery of interrupted runs. Delete controls. Packaged installer. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Direct API integrations beyond Anthropic and OpenAI (Gemini has been exercised through an external CLI; no native Gemini or local/Ollama integration).
 
 ---
 
@@ -46,15 +47,27 @@ python -m pip install -e ".[dev]"
 cd frontend && npm ci && cd ..
 ```
 
-You'll also need either an `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` environment variable (for API-key mode), or an already-installed, already-authenticated CLI like `claude` or `agy` (for CLI mode).
+You'll also need either an API key saved through Settings or an `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` environment variable (for API-key mode), or an already-installed, already-authenticated CLI like `claude` or `agy` (for CLI mode).
 
 > **Note (multi-worktree environments):** An editable install points to a checkout within the Python environment used for installation. Sharing that environment across worktrees silently changes the import target. Use one `.venv` per worktree. If you have multiple worktrees, run the suite as `PYTHONPATH=src pytest` to bypass the editable install and hit the right source. See [`docs/MULTI_AGENT_WORKTREES.md`](docs/MULTI_AGENT_WORKTREES.md) for details.
 
 ---
 
+## Running the MVP
+
+After installation, build the UI once and launch one server:
+
+```bash
+npm --prefix frontend run build
+python scripts/build_frontend.py
+decifra serve
+```
+
+The browser opens at `http://127.0.0.1:8765`. The database lives in the OS user data directory. `--data-dir PATH` selects another directory; no old database is moved automatically. On Windows, `powershell -File scripts/start_pilot.ps1` instead keeps isolated pilot data/settings under this checkout's `data/pilot`. [Suggested test steps](docs/MVP_TEST_GUIDE.md).
+
 ## Running it (development)
 
-There's no packaged app yet — running Decifra today means starting the FastAPI backend and the Vite frontend together. `scripts/dev.sh` (macOS/Linux/Git Bash) and `scripts/dev.ps1` (native PowerShell) do that with one command instead of two terminals:
+For frontend development with live reloading, start the FastAPI backend and Vite together. `scripts/dev.sh` (macOS/Linux/Git Bash) and `scripts/dev.ps1` (native PowerShell) do that with one command instead of two terminals:
 
 ```bash
 scripts/dev.sh              # backend on :8000, frontend on :5173

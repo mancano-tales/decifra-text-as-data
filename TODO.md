@@ -2,7 +2,9 @@
 
 ## Pending
 
-- 2026-09-07 � Verified alpha, not complete MVP acceptance. Priorities: cost estimate, document import UI, settings/entry point, run recovery, and version-aware scientific audit. See `docs/MVP_STATUS.md` for evidence and remaining work.
+- 2026-09-07 — After MVP handoff: durable run recovery/cancel/resume, version-scoped gold labels, complete disclosure history, CLI-command-aware cache identity, installer and a larger independent human-coded pilot remain open. See `docs/MVP_TEST_GUIDE.md`.
+
+- 2026-09-07 — Verified alpha, not complete MVP acceptance. Priorities: cost estimate, document import UI, settings/entry point, run recovery, and version-aware scientific audit. See `docs/MVP_STATUS.md` for evidence and remaining work.
 
 - 2026-09-03 — Product renamed Cifra → Decifra; GitHub repo is now
   `mancano-tales/decifra-text-as-data` (see `NEWS.md` for the full list of
@@ -74,7 +76,10 @@
 
 ## Done
 
-- 2026-09-07 � Consolidated V7 experiments and multi-variable design history; preserved untracked research/provider specs. Corrected both READMEs/site (R0.1), lazy database initialization and dev launchers. Verified 259 tests, frontend lint/build, HTTP workflow and one live CLI classification. See `docs/MVP_STATUS.md`.
+- 2026-09-07 — MVP handoff: document-upload UI, OS-keyring settings, approximate pre-run token/cache estimate with optional user-supplied prices, single-origin `decifra serve`, visible evidence/audit/errors, preservation of original reviewed answers and exclusion from cache, corpus-scoped validation coverage, and SDK token recording. Frontend lint/build and the full suite passed. A three-document live CLI run started from the browser completed with all evidence verified.
+- Learning — The Windows virtualenv launcher has a child Python process: a persistent server must be managed as a process tree. Approximate estimates must distinguish unknown CLI billing from zero cost, and saved defaults must load before accepting a run.
+
+- 2026-09-07 — Consolidated V7 experiments and multi-variable design history; preserved untracked research/provider specs. Corrected both READMEs/site (R0.1), lazy database initialization and dev launchers. Verified 259 tests, frontend lint/build, HTTP workflow and one live CLI classification. See `docs/MVP_STATUS.md`.
 
 - 2026-09-03 — V7 pipeline tuning items 2, 4, 5 measured/resolved with
   real `agy` runs against the real 16-candidate set (112 real LLM calls;

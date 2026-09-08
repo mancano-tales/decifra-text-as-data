@@ -21,7 +21,10 @@
     "xlsxTitle": "Enviar XLSX",
     "textColumn": "Coluna de texto",
     "file": "Arquivo",
-    "upload": "Enviar"
+    "upload": "Enviar",
+    "documentsTitle": "Importar documentos",
+    "documentsHelp": "TXT, Markdown, DOCX ou PDF com texto. Cada arquivo vira um documento; PDFs digitalizados precisam de OCR externo.",
+    "imported": "{{count}} documentos importados."
   },
   "codebook": {
     "listTitle": "Codebooks",
@@ -74,7 +77,24 @@
     "modelRequired": "O modelo não pode ficar vazio.",
     "cliCommandRequired": "O comando de CLI não pode ficar vazio.",
     "unknownCategory": "{{value}} (não é um rótulo atual do codebook)",
-    "noResults": "Nenhum resultado corresponde a este filtro."
+    "noResults": "Nenhum resultado corresponde a este filtro.",
+    "bypassCache": " Executar novamente (ignorar cache)",
+    "configureFirst": "Configure sua chave API em Configurações ou escolha CLI.",
+    "estimateTitle": "Antes de executar",
+    "estimateButton": "Estimar uso",
+    "estimateCounts": "{{documents}} documentos · {{cached_documents}} em cache · {{new_documents}} novas chamadas",
+    "estimateTokens": "≈ {{input_tokens}} tokens de entrada + {{output_tokens}} tokens de saída",
+    "priceUnavailable": "Estimativa monetária indisponível. Na CLI, a cobrança depende da sua assinatura; preços de API podem ser informados em Configurações.",
+    "estimatePrice": "≈ US$ {{price}} com os preços que você informou",
+    "estimateDisclaimer": "Aproximação pelo tamanho do prompt (caracteres/4), incluindo o esquema. A saída é uma previsão; tentativas adicionais podem aumentar o uso. Não é um limite de gastos.",
+    "documentErrors": "{{count}} documentos falharam. Revise as linhas __error__ antes de usar ou exportar os resultados.",
+    "evidence": "Evidência",
+    "evidenceVerified": "Encontrada no texto",
+    "evidenceUnverified": "Não verificada — revisar",
+    "audit": "Consultar prompt e resposta",
+    "prompt": "Prompt enviado",
+    "response": "Resposta registrada",
+    "original": "Original antes da revisão"
   },
   "validation": {
     "title": "Validar",
@@ -99,5 +119,21 @@
     "server": "Erro no servidor",
     "unknown": "Algo deu errado",
     "details": "Detalhes"
+  },
+  "settings": {
+    "title": "Configurações",
+    "loading": "Carregando configurações…",
+    "help": "Escolha os padrões das próximas execuções. Para CLI, a ferramenta instalada deve estar autenticada.",
+    "keyHelp": "As chaves ficam no cofre de credenciais do sistema. Deixe os campos intactos para manter as chaves. Variáveis de ambiente têm prioridade.",
+    "configured": "Configurada",
+    "missing": "Não configurada",
+    "removeKey": "Remover chave salva",
+    "removePending": "Será removida ao salvar.",
+    "estimate": "Estimativa de uso",
+    "priceHelp": "Opcional: informe o preço do seu modelo em USD por milhão de tokens. São valores informados por você, sem atualização automática.",
+    "outputBudget": "Tokens de saída previstos por documento",
+    "input_usd_per_million": "Entrada: USD por milhão de tokens",
+    "output_usd_per_million": "Saída: USD por milhão de tokens",
+    "saved": "Configurações salvas."
   }
 }

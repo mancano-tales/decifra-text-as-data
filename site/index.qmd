@@ -3,6 +3,11 @@ title: "Decifra"
 subtitle: "Codebook-driven text coding, validated against human coding"
 ---
 
+::: {.callout-note}
+## MVP pilot update — 2026-09-07
+Document uploads, approximate token estimates, saved provider settings, evidence inspection and a single-server frontend are now implemented. Run `decifra serve` after building the frontend. See the repository's `docs/MVP_TEST_GUIDE.md` for setup, testing and limitations. Older roadmap statements below describe the preceding alpha audit.
+:::
+
 ## The problem
 
 Turning messy text into structured data is a routine need: is this article

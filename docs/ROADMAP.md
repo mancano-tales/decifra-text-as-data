@@ -123,11 +123,13 @@ returns only the i18n locale files and historical docs).
 
 ## Phase 2 — Usable by a second person (without packaging yet)
 
+2026-09-07 handoff (session `01a0798d-ac03-7570-b17c-31f5dcdff1e1`): R2.1 and R2.4 implemented in the commit adding `docs/MVP_TEST_GUIDE.md` (`git log -1 -- docs/MVP_TEST_GUIDE.md`). R2.2 has approximate offline token/cache estimates, user-supplied prices and SDK usage recording; vendor token counters/versioned automatic prices remain pending. The user prioritized a single-variable MVP frontend, so these additive changes proceeded without migrating the multi-variable draft. Key storage refuses plaintext fallback; missing OS vaults require environment variables or CLI mode.
+
 All R2.x items are independent of each other and can be parallelized across
 sessions *after* R1.1 lands, since several touch the same tables. If R1.1 is
 not done yet, only R2.4, R2.5, and R2.7 are safe to start.
 
-### R2.1 `[ ]` Settings screen and persisted credentials
+### R2.1 `[x]` Settings screen and persisted credentials
 
 **Depends on**: nothing hard, but R1.1 first avoids a second frontend pass.
 **Size**: 1-2 days. **Spec first**: yes (short).
@@ -155,7 +157,7 @@ Acceptance: a user with no environment variables set can paste a key in the
 UI, restart the backend, and run. The key never appears in any API
 response, log line, export, or disclosure report.
 
-### R2.2 `[ ]` Cost estimate before a run, and tokens actually recorded
+### R2.2 `[~]` Cost estimate before a run, and tokens actually recorded
 
 **Depends on**: R1.1 (prompt shape changes). **Size**: 1 day.
 **Spec first**: no.
@@ -206,7 +208,7 @@ Acceptance: deleting a run removes its extractions and labels; deleting a
 codebook in use is refused with a message naming the runs; tests cover
 cascade and refusal.
 
-### R2.4 `[ ]` Backend serves the built frontend; `cifra` entry point; DB in the user data dir
+### R2.4 `[x]` Backend serves the built frontend; `cifra` entry point; DB in the user data dir
 
 **Depends on**: nothing. **Size**: 1 day. **Spec first**: no.
 

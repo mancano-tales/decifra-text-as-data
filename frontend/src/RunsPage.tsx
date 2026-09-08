@@ -89,7 +89,7 @@ export function RunsPage() {
       await refreshRuns();
       if (isStale(token)) return;
 
-      if (status.status === "done") {
+      if (!ACTIVE_STATUSES.has(status.status)) {
         const [rows, codebookDetail] = await Promise.all([getRunResults(runId), getCodebook(codebookId)]);
         if (isStale(token)) return;
         setResults(rows);

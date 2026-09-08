@@ -65,6 +65,7 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
   return (
     <div>
       <h3 className="card-title">{t("runs.resultsTitle")}</h3>
+      {results.some(r=>r.categoria === "__error__") && <div className="banner-error">{t("runs.documentErrors",{count:results.filter(r=>r.categoria === "__error__").length})}</div>}
       <div className="field">
         <label className="field-label" htmlFor="results-category-filter">
           {t("runs.filterByCategory")}
@@ -98,6 +99,7 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
               <th>{t("runs.colDocument")}</th>
               <th>{t("runs.colCategory")}</th>
               <th>{t("runs.colJustification")}</th>
+              <th>{t("runs.evidence")}</th>
               <th></th>
             </tr>
           </thead>
@@ -138,6 +140,11 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
                   ) : (
                     row.justificativa
                   )}
+                </td>
+                <td>
+                  <blockquote>{row.trecho_evidencia || "—"}</blockquote>
+                  <span className="pill">{t(row.evidence_verified ? "runs.evidenceVerified" : "runs.evidenceUnverified")}</span>
+                  <details><summary>{t("runs.audit")}</summary><h4>{t("runs.prompt")}</h4><pre>{row.prompt_sent}</pre><h4>{t("runs.response")}</h4><pre>{row.raw_response}</pre>{row.original_result_json && <><h4>{t("runs.original")}</h4><pre>{row.original_result_json}</pre></>}</details>
                 </td>
                 <td>
                   {editingId === row.id ? (

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { createCorpusFromCsv, createCorpusFromPaste, createCorpusFromXlsx, listCorpora } from "./api";
+import { createCorpusFromDocuments, createCorpusFromCsv, createCorpusFromPaste, createCorpusFromXlsx, listCorpora } from "./api";
 import type { CorpusSummary } from "./api";
 import { describeApiError } from "./errorMessages";
 
@@ -11,6 +11,11 @@ export function CorpusPage() {
   const [error, setError] = useState<unknown>(null);
   const shownError = error ? describeApiError(error, t) : null;
 
+  const [documentName, setDocumentName] = useState("");
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [documentBusy, setDocumentBusy] = useState(false);
+  const documentInput = useRef<HTMLInputElement>(null);
+  const [notice, setNotice] = useState("");
   const [pasteName, setPasteName] = useState("");
   const [pasteText, setPasteText] = useState("");
 
@@ -131,7 +136,18 @@ export function CorpusPage() {
         )}
       </section>
 
+      {notice && <p role="status">{notice}</p>}
       <div className="card-grid">
+        <form className="card" onSubmit={async e => {
+          e.preventDefault(); if(documentBusy) return; setDocumentBusy(true); setError(null); setNotice("");
+          try {const result=await createCorpusFromDocuments(documentName,documentFiles); setNotice(t("corpus.imported",{count:result.document_count})); setDocumentName(""); setDocumentFiles([]); if(documentInput.current) documentInput.current.value=""; await refresh();} catch(e) {setError(e);} finally {setDocumentBusy(false);}
+        }}>
+          <h3 className="card-title">{t("corpus.documentsTitle")}</h3>
+          <p>{t("corpus.documentsHelp")}</p>
+          <div className="field"><label htmlFor="documents-name">{t("corpus.corpusName")}</label><input id="documents-name" required value={documentName} onChange={e=>setDocumentName(e.target.value)}/></div>
+          <div className="field"><label htmlFor="documents-files">{t("corpus.file")}</label><input id="documents-files" ref={documentInput} type="file" multiple required accept=".txt,.md,.docx,.pdf" onChange={e=>setDocumentFiles(Array.from(e.target.files ?? []))}/></div>
+          <button className="btn btn-primary" disabled={documentBusy || !documentFiles.length}>{t("corpus.upload")}</button>
+        </form>
         <form className="card" onSubmit={handlePaste}>
           <h3 className="card-title">{t("corpus.pasteTitle")}</h3>
           <div className="field">

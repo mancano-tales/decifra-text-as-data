@@ -1,5 +1,17 @@
 # Decifra: verified MVP status
 
+## Update: functional MVP handoff (2026-09-07)
+
+The follow-up implementation closes document import in the UI and adds approximate pre-run token/cache estimates, optional user-entered monetary rates, persisted provider defaults, OS-keyring credential entry, and `decifra serve` with one local frontend/API origin. It also surfaces evidence and errors, preserves the original pre-review answer, excludes reviewed rows from cache, scopes validation coverage to the corpus, and records SDK-reported tokens when available.
+
+Verification: 267 distinct tests passed (266-test full suite plus the final eight-test handoff regression run, including one added coverage test), and frontend lint/build passed (three existing frontend warnings). The browser-started real CLI run classified three synthetic Portuguese documents, all with verified quotations. Browser document upload, settings save, result review/original preservation, CSV export and synthetic gold-label validation also passed. Local handoff URL: http://127.0.0.1:8765. See [the test guide](MVP_TEST_GUIDE.md) for startup and remaining limitations.
+
+This is a functional single-variable MVP for supervised user testing, not a packaged or scientifically validated production release. Price rates are user supplied; estimates are approximate and exclude retries. Durable recovery, version-scoped gold labels and complete disclosure history remain open.
+
+## Earlier audit (historical)
+
+The following records the state before the handoff implementation; items closed above are no longer pending.
+
 Assessment date: 2026-09-07. This assessment describes the local consolidated code, not a released package.
 
 ## Verdict and purpose

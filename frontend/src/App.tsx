@@ -4,7 +4,9 @@ import { CodebookEditor } from "./CodebookEditor";
 import { CorpusPage } from "./CorpusPage";
 import { RunsPage } from "./RunsPage";
 
-type Tab = "corpus" | "codebook" | "runs";
+import { SettingsPage } from "./SettingsPage";
+
+type Tab = "corpus" | "codebook" | "runs" | "settings";
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -31,6 +33,7 @@ function App() {
             <button className="seg-btn" disabled={tab === "runs"} onClick={() => setTab("runs")}>
               {t("app.nav.runs")}
             </button>
+            <button className="seg-btn" disabled={tab === "settings"} onClick={() => setTab("settings")}>{t("settings.title")}</button>
           </div>
           <div className="seg" aria-label="Language">
             <button
@@ -55,6 +58,7 @@ function App() {
         {tab === "corpus" && <CorpusPage />}
         {tab === "codebook" && <CodebookEditor />}
         {tab === "runs" && <RunsPage />}
+        {tab === "settings" && <SettingsPage />}
       </main>
     </>
   );
