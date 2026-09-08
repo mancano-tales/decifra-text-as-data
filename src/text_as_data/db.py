@@ -121,6 +121,7 @@ class ExtractionRecord(SQLModel, table=True):
     # a pre-existing row migrated before this column existed.
     evidence_match_tier: str = ""
     tokens_used: int | None = None
+    original_result_json: str = ""
     # Audit trail: the exact prompt sent and the raw (pre-parsing) response
     # received, so any result can be verified later without having to trust
     # a reconstruction from current source -- see ProviderResult in

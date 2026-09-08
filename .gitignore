@@ -22,3 +22,5 @@ frontend/dist/
 # branch by .github/workflows/publish-site.yml, not committed to main.
 site/_site/
 site/.quarto/
+
+src/text_as_data/static/

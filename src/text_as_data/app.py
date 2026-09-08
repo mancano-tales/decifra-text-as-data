@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from threading import Lock
 from typing import Literal
@@ -8,9 +9,11 @@ from typing import Literal
 import pandas as pd
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 from sqlmodel import Session, delete, select
 
+from .config import Settings, api_key, credential_status, read_settings, save_api_key, save_settings
+from .estimate import estimate_run
 from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_docx_bytes, parse_pdf_bytes, parse_txt_bytes, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, HumanLabelRecord, RunRecord, get_engine
@@ -63,7 +66,8 @@ def get_engine_dependency():
     global _engine
     with _engine_lock:
         if _engine is None:
-            _engine = get_engine()
+            db_url = os.environ.get("DECIFRA_DB_URL")
+            _engine = get_engine(db_url) if db_url else get_engine()
         return _engine
 
 
@@ -119,7 +123,46 @@ def get_provider_dependency(request: CreateRunRequest) -> Provider:
         if not request.cli_command:
             raise HTTPException(status_code=422, detail="cli_command is required when provider_mode is 'cli'")
         return CliProvider(command=request.cli_command, prompt_mode=request.cli_prompt_mode)
-    return make_api_key_provider(vendor=_vendor_for_model(request.model), model=request.model)
+    vendor = _vendor_for_model(request.model)
+    key = api_key(vendor)
+    if not key:
+        raise HTTPException(status_code=422, detail=f"Configure an API key for {vendor} in Settings, or choose CLI mode.")
+    return make_api_key_provider(vendor=vendor, model=request.model, api_key=key)
+
+
+class SettingsUpdate(Settings):
+    anthropic_api_key: SecretStr | None = None
+    openai_api_key: SecretStr | None = None
+
+
+@app.get("/settings")
+def get_settings():
+    return {**read_settings().model_dump(), "credentials": {vendor: credential_status(vendor) for vendor in ("anthropic", "openai")}}
+
+
+@app.put("/settings")
+def update_settings(request: SettingsUpdate):
+    for vendor in ("anthropic", "openai"):
+        value = getattr(request, f"{vendor}_api_key")
+        if value is not None:
+            try:
+                save_api_key(vendor, value.get_secret_value())
+            except Exception:
+                raise HTTPException(status_code=503, detail="OS credential storage unavailable. Use an environment variable or CLI mode.") from None
+    save_settings(Settings.model_validate(request.model_dump(exclude={"anthropic_api_key", "openai_api_key"})))
+    return get_settings()
+
+
+@app.post("/runs/estimate")
+def get_estimate(request: CreateRunRequest, engine=Depends(get_engine_dependency)):
+    with Session(engine) as session:
+        record = session.get(CodebookRecord, request.codebook_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Codebook not found")
+        result = estimate_run(session, record, request.corpus_id, request.model, request.provider_mode, request.bypass_cache, read_settings())
+        if not result["documents"]:
+            raise HTTPException(status_code=404, detail="Corpus not found")
+        return result
 
 
 @app.get("/runs")
@@ -268,6 +311,8 @@ def update_extraction(
                 ),
             )
 
+        if not extraction.original_result_json:
+            extraction.original_result_json = json.dumps({"categoria": extraction.categoria, "justificativa": extraction.justificativa, "trecho_evidencia": extraction.trecho_evidencia}, ensure_ascii=False)
         extraction.categoria = request.categoria
         extraction.justificativa = request.justificativa
         session.add(extraction)
@@ -380,7 +425,9 @@ def get_run_validation(run_id: int, engine=Depends(get_engine_dependency)):
             session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)).all()
         )
         gold_rows = session.exec(
-            select(HumanLabelRecord).where(HumanLabelRecord.codebook_id == run.codebook_id)
+            select(HumanLabelRecord).join(DocumentRecord, HumanLabelRecord.document_id == DocumentRecord.id).where(
+                HumanLabelRecord.codebook_id == run.codebook_id, DocumentRecord.corpus_id == run.corpus_id
+            )
         ).all()
 
         gold_by_document: dict[int, list[str]] = {}

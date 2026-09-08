@@ -26,6 +26,7 @@ class ProviderResult:
     parsed: BaseModel
     prompt: str
     raw_response: str
+    tokens_used: int | None = None
 
 
 class Provider(ABC):
@@ -57,7 +58,15 @@ class ApiKeyProvider(Provider):
         # no separate "raw text" distinct from the parsed result the way
         # CliProvider has raw CLI stdout -- the parsed JSON itself is the
         # most honest thing to record as what was actually received.
+        usage = getattr(getattr(result, "_raw_response", None), "usage", None)
+        tokens = getattr(usage, "total_tokens", None)
+        if tokens is None and usage is not None:
+            input_tokens = getattr(usage, "input_tokens", None)
+            output_tokens = getattr(usage, "output_tokens", None)
+            if input_tokens is not None and output_tokens is not None:
+                tokens = input_tokens + output_tokens
         return ProviderResult(
+            tokens_used=tokens,
             parsed=result,
             prompt=json.dumps(messages, ensure_ascii=False),
             raw_response=result.model_dump_json(),

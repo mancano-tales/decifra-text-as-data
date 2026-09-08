@@ -150,6 +150,7 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                 # cached answer back would make "run it again" always
                 # agree with itself by construction, defeating the whole
                 # point of testing whether the LLM's own output is stable.
+                tokens_used = None
                 cached = None
                 if not run.bypass_cache:
                     cached = session.exec(
@@ -170,12 +171,15 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                             RunRecord.codebook_id == run.codebook_id,
                             RunRecord.codebook_yaml_hash == codebook_yaml_hash,
                             RunRecord.model == run.model,
+                            RunRecord.provider_mode == run.provider_mode,
+                            ExtractionRecord.original_result_json == "",
                             ExtractionRecord.categoria != ERROR_CATEGORIA,
                         )
                         .order_by(ExtractionRecord.id.desc())
                     ).first()
 
                 if cached is not None:
+                    tokens_used = 0
                     categoria, justificativa, trecho = (
                         cached.categoria,
                         cached.justificativa,
@@ -202,6 +206,7 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                             result.parsed.trecho_evidencia,
                         )
                         prompt_sent, raw_response = result.prompt, result.raw_response
+                        tokens_used = result.tokens_used
                     except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
                         # A subprocess.TimeoutExpired's str() includes
                         # whatever partial stdout/stderr was captured before
@@ -227,6 +232,7 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                         evidence_match_tier=evidence_match_tier,
                         prompt_sent=prompt_sent,
                         raw_response=raw_response,
+                        tokens_used=tokens_used,
                     )
                 )
                 session.commit()
