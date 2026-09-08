@@ -2,8 +2,8 @@
 
 ## 2026-09-07 (brand)
 
-- Added candidate brand icon assets in `assets/icons/` with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles, Ancient Egyptian canonical silhouettes, and clean line-art variants, accompanied by technical documentation.
-- Promoted the canonical **Squircle Roseta** mark (geometric monolith with 45-degree chamfer, negative-space Thoth ibis arc, and data strata) across the software: updated `frontend/public/favicon.svg`, refined `.brand-mark` in `frontend/src/index.css` and `App.tsx`, configured the Quarto documentation site (`site/assets/favicon.svg` and `site/_quarto.yml`), and added the master SVG asset `assets/icons/decifra_squircle_mark.svg`.
+- Added candidate brand icon assets in assets/icons/ with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles and ancient Egyptian canonical silhouettes, accompanied by technical documentation.
+- Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.
 
 ## 2026-09-07 (MVP handoff)
 
