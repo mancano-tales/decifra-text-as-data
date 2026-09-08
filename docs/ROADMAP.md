@@ -537,6 +537,128 @@ Keith's released materials, license permitting) as an example project, so
 a new user can see a real validation report before importing their own
 data.
 
+### R6.6 `[ ]` PPI-corrected prevalence estimate on the Validation screen
+
+**Source**: Halterman & Keith (2026), "What is a protest anyway?" (ACL) —
+see `docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`
+§ 3.3. **Depends on**: nothing (works against the current single-variable
+schema; extend to per-variable once R1.1 lands). **Size**: 1-2 days.
+**Spec first**: no — the estimator is fully specified in closed form in
+the paper (its Algorithm 1), so there is little design ambiguity.
+
+`agreement_report()` in `validation.py` is a diagnostic (accuracy, kappa,
+precision/recall/F1, disagreements) — it never produces a number a
+researcher could actually cite as their corrected estimate of a category's
+prevalence in the full corpus. The paper's "pragmatist" workflow combines
+exactly the two things a Decifra run already has after validation import
+(full-corpus LLM predictions, a gold subset) into an unbiased
+point-estimate-with-CI via Prediction-Powered Inference (PPI;
+Angelopoulos et al. 2023). This is the single highest-value item in the
+dialogue doc's recommendations.
+
+Do:
+- Add `ppi_prevalence_estimate()` to `validation.py`: per category, treat
+  "document is labeled category X" as a binary indicator, and implement
+  the paper's Algorithm 1 — LLM-only point estimate over all N documents,
+  minus the empirical "rectifier" (mean LLM-vs-gold error on the n
+  gold-labeled documents), plus the combined-variance 95% CI. Docstring
+  cites the paper and Angelopoulos et al. (2023) directly.
+- Extend the validation report (`GET /runs/{id}/validation` or wherever
+  `agreement_report()` is currently surfaced in `app.py`) to include this
+  per-category, alongside the existing kappa/precision/recall/F1 — additive,
+  not a replacement.
+- Surface it in `ValidationPanel.tsx` as its own labeled block ("Corrected
+  prevalence estimate") with a one-line explanation of what it is and why
+  it differs from the naive LLM-only proportion.
+- Test against a small hand-computed example (values chosen so the correct
+  PPI output can be verified by hand, not just against your own
+  implementation) and against a synthetic dataset with deliberately biased
+  LLM labels, asserting the corrected estimate is closer to the known true
+  prevalence than the naive mean.
+
+Acceptance: given a finished run with a gold subset imported, the
+Validation screen shows a corrected prevalence estimate with 95% CI per
+category; the underlying function's output matches a hand-verified example
+in a test.
+
+### R6.7 `[ ]` Distinguish conceptualization error from scoring error in docs and the Validation UI
+
+**Source**: same paper as R6.6, Claim 3. **Depends on**: nothing.
+**Size**: a few hours. **Spec first**: no.
+
+`AGENTS.md`'s existing "Why validation is not optional" section already
+cites this paper by title but only engages the *first* Halterman & Keith
+paper's finding (LLMs deviating from an otherwise-fine codebook). This
+paper's finding is different and sharper: a high Cohen's kappa only
+certifies that the LLM and the human gold-coder *agree with each other* —
+it says nothing about whether the codebook itself is complete, and two
+annotators can agree while both being wrong relative to the researcher's
+actual construct. Nothing in Decifra's docs or UI currently says this, so
+a researcher can read a kappa of 0.9 as "my codebook is fine" when that is
+not what the number means.
+
+Do:
+- Rewrite `AGENTS.md`'s "Why validation is not optional" section to name
+  both failure modes explicitly (conceptualization error vs. scoring
+  error) and state plainly what a high kappa does and does not certify.
+- Apply the same correction to `site/validation.qmd`.
+- Add a one-sentence note or tooltip next to the kappa score in
+  `ValidationPanel.tsx` making the same point, linking to the docs page.
+
+Acceptance: a new reader of `AGENTS.md`'s validation section, or a user
+looking at the Validation screen, cannot come away believing a high kappa
+alone certifies a complete codebook.
+
+### R6.8 `[ ]` Warn when a gold set was coded against a different codebook version
+
+**Source**: same paper as R6.6, Appendix Table A1's "procedural error".
+**Depends on**: R1.1 preferred (less churn on the human-labels/codebook
+link after the multi-variable migration), but can be built against the
+current schema too. **Size**: half a day. **Spec first**: no.
+
+If a user edits a codebook after hand-coding a gold set against an earlier
+version, then runs validation, nothing currently detects that the gold
+labels and the LLM run were produced against different codebook text — a
+silent way to get exactly the invisible-bias outcome the paper's
+simulation warns about.
+
+Do:
+- Store a codebook version identifier (a hash of `yaml_raw`, or an
+  explicit version counter bumped on edit) alongside each imported
+  `HumanLabelRecord` batch, and on `RunRecord`.
+- When building the validation report, compare the gold set's stored
+  version against the run's codebook version; if they differ, show an
+  explicit mismatch warning instead of (or above) the agreement metrics.
+
+Acceptance: importing gold labels, editing the codebook, then validating a
+run against the stale gold set shows a visible mismatch warning; matching
+versions show none.
+
+### R6.9 `[ ]` ACLED-derived starter/example codebook
+
+**Source**: same paper as R6.6, Figure 2 / Appendix B.3. **Depends on**:
+nothing. **Size**: a few hours. **Spec first**: no.
+
+New users hit a blank Codebook Editor with no worked example of what a
+good Type III definition (full stipulative definition + explicit boundary
+notes) looks like.
+
+Do:
+- Add a bundled example codebook (YAML) adapting ACLED's PROTEST
+  definition (Raleigh et al., 2010, quoted in the paper's §B.3): "an
+  in-person public demonstration of three or more participants in which
+  the participants do not engage in violence, though violence may be used
+  against them," with its explicit exclusion list (symbolic acts,
+  legislative walkouts, strikes not accompanied by a demonstration,
+  individual self-harm actions) as `boundary_notes`. Attribute ACLED
+  clearly in the codebook's `description`.
+- Offer a "load example" action in the Codebook Editor for a new/empty
+  workspace.
+
+Acceptance: a first-time user can load the example codebook in one action
+and see a fully worked Type III definition with boundary notes to model
+their own codebook on.
+
 ---
 
 ## Phase 7 — Release

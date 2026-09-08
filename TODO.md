@@ -2,6 +2,21 @@
 
 ## Pending
 
+- 2026-09-08 — `docs/ROADMAP.md` Phase 6 gained four new briefs (R6.6-R6.9)
+  from reading Halterman & Keith (2026, ACL) "What is a protest anyway?"
+  in full (analysis:
+  `docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`).
+  Highest-value: R6.6, a PPI-corrected prevalence estimate on the
+  Validation screen (the paper gives the estimator in closed form) — turns
+  the screen from a QA diagnostic into something that produces an actual
+  citable number. R6.7 corrects `AGENTS.md`'s validation section, which
+  currently doesn't distinguish conceptualization error (incomplete
+  codebook — a high kappa doesn't catch this) from scoring error
+  (LLM/annotator misapplying an otherwise-fine codebook) — the paper's
+  sharpest and most novel point for this project. R6.8 and R6.9 are
+  smaller: a codebook-version-mismatch warning for gold sets, and an
+  ACLED-derived starter codebook for new users.
+
 - 2026-09-07 — After MVP handoff: durable run recovery/cancel/resume, version-scoped gold labels, complete disclosure history, CLI-command-aware cache identity, installer and a larger independent human-coded pilot remain open. See `docs/MVP_TEST_GUIDE.md`.
 
 - 2026-09-07 — Verified alpha, not complete MVP acceptance. Priorities: cost estimate, document import UI, settings/entry point, run recovery, and version-aware scientific audit. See `docs/MVP_STATUS.md` for evidence and remaining work.

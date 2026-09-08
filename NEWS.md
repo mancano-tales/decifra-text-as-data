@@ -1,5 +1,9 @@
 # NEWS
 
+## 2026-09-08 (research)
+
+- Read Halterman & Keith (2026, ACL) "What is a protest anyway?" in full and wrote a dialogue/analysis document (`docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`) — the full paper text was not committed (copyrighted, published work, this repo is public). Identified that the Validation screen currently has no way to detect conceptualization error (an incomplete codebook), as distinct from scoring error (a misapplied one), and that a high Cohen's kappa does not certify a complete codebook even though nothing in the docs or UI currently says so. Added four new `docs/ROADMAP.md` Phase 6 briefs (R6.6-R6.9): a PPI-corrected prevalence estimate for the Validation screen, sharpening `AGENTS.md`'s validation section and the Validation UI to name both error types, a codebook-version-mismatch warning for gold sets, and an ACLED-derived starter codebook.
+
 ## 2026-09-08 (brand)
 
 - Replaced the emoji-style colored ibis mark with a monochrome ibis-and-torn-page logo, cropped directly from a user-supplied reference PNG (no redrawing by the agent). Serves as both the browser favicon (`favicon.png`) and the header brand mark; the header's colored background square was dropped since the new mark is black-on-transparent.
