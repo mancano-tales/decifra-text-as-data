@@ -22,6 +22,7 @@ All assets in this directory are provided with **true alpha transparency** (no b
 
 | File | Description | Recommended Usage |
 | :--- | :--- | :--- |
+| `decifra_squircle_mark.svg` | **Canonical Unified Mark**: Modern squircle with 45° chamfered corner, negative space Thoth ibis beak arc, and data registers. | Unified application brand icon: browser favicon, web app header, Tauri desktop icon, Quarto site logo. |
 | `rosetta_stele_flat_base_transparent.png` | Solid Rosetta stele with clean geometric flat base, ibis silhouette, and horizontal text data lines in negative space. | Primary candidate for app icon, dock emblem, and high-DPI branding. |
 | `ibis_head_s_curve_transparent.png` | Minimalist S-curve bust and curved beak of the sacred ibis (dark stroke). | Primary candidate for browser favicon (16px/32px) and minimal header glyph. |
 | `ibis_head_s_curve_white_transparent.png` | Inverted white S-curve ibis bust for dark mode backgrounds. | Dark-mode favicon, dark UI headers, and terminal CLI badges. |

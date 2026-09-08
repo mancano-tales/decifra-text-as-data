@@ -84,13 +84,10 @@ p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  flex-shrink: 0;
 }
 
 .app-title {
