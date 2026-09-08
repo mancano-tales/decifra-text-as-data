@@ -2,6 +2,7 @@
 
 ## 2026-09-07 (brand)
 
+- Added candidate brand icon assets in assets/icons/ with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles and ancient Egyptian canonical silhouettes, accompanied by technical documentation.
 - Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.
 
 ## 2026-09-07 (MVP handoff)
