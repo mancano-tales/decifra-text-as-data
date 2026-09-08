@@ -22,7 +22,7 @@ All assets in this directory are provided with **true alpha transparency** (no b
 
 | File | Description | Recommended Usage |
 | :--- | :--- | :--- |
-| `rosetta_stele_flat_base_transparent.png` | Solid Rosetta stele with clean geometric flat base, ibis silhouette, and horizontal text data lines in negative space. | Primary candidate for app icon, dock emblem, and high-DPI branding. |
+| `rosetta_stele_flat_base_transparent.png` | **Official Application Icon**: Solid Rosetta stele with clean flat base, ibis silhouette, and horizontal text data strata in negative space. | Primary brand mark for web app header, browser favicon, desktop dock icon, and documentation site logo. |
 | `ibis_head_s_curve_transparent.png` | Minimalist S-curve bust and curved beak of the sacred ibis (dark stroke). | Primary candidate for browser favicon (16px/32px) and minimal header glyph. |
 | `ibis_head_s_curve_white_transparent.png` | Inverted white S-curve ibis bust for dark mode backgrounds. | Dark-mode favicon, dark UI headers, and terminal CLI badges. |
 | `ibis_standing_monoline_transparent.png` | Standing sacred ibis in clean vector line art with filled head/beak and contoured body. | Documentation diagrams, hero illustrations, and about dialogs. |

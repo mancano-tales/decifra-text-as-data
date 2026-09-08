@@ -2,8 +2,8 @@
 
 ## 2026-09-07 (brand)
 
-- Added candidate brand icon assets in assets/icons/ with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles and ancient Egyptian canonical silhouettes, accompanied by technical documentation.
-- Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.
+- Added candidate brand icon assets in `assets/icons/` with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles, Ancient Egyptian canonical silhouettes, and clean line-art variants, accompanied by technical documentation.
+- Promoted the official **Rosetta Stele Flat Base** mark (`rosetta_stele_flat_base_transparent.png`) across the software: configured `frontend/public/favicon.png` and `favicon.svg`, updated `frontend/src/App.tsx` and `.brand-mark` styling in `frontend/src/index.css`, configured Quarto site branding in `site/assets/` and `site/_quarto.yml`, and updated `assets/icons/README.md`.
 
 ## 2026-09-07 (MVP handoff)
 

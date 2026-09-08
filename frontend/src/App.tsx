@@ -16,7 +16,7 @@ function App() {
     <>
       <header className="app-header">
         <div className="brand">
-          <img className="brand-mark" src="/favicon.svg" alt="" width="36" height="36" />
+          <img className="brand-mark" src="/favicon.png" alt="Decifra" width="36" height="36" />
           <span className="app-title">{t("app.title")}</span>
           <span className="app-tagline">{t("app.tagline")}</span>
         </div>
