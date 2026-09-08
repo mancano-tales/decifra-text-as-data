@@ -3,6 +3,7 @@
 ## 2026-09-08 (brand)
 
 - Replaced the emoji-style colored ibis mark with a monochrome ibis-and-torn-page logo, cropped directly from a user-supplied reference PNG (no redrawing by the agent). Serves as both the browser favicon (`favicon.png`) and the header brand mark; the header's colored background square was dropped since the new mark is black-on-transparent.
+- Extended the same mark to the Quarto marketing site (`site/`): favicon, a black-on-white logo in the docked sidebar, and a white-on-dark counterpart (`logo-navbar.png`, cropped from a separate reference PNG) in the dark navbar, since a single black-on-transparent asset disappears against the navbar's dark background.
 
 ## 2026-09-07 (brand)
 

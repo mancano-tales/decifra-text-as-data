@@ -76,6 +76,13 @@
 
 ## Done
 
+- 2026-09-08 — Extended the ibis-and-page brand mark to the Quarto site
+  (favicon, sidebar logo, and a separate white-on-dark navbar logo).
+  Learning — a single black-on-transparent logo asset is not enough once a
+  UI has both light and dark surfaces (this site's navbar is dark, its
+  sidebar is light); check each surface's background before reusing one
+  icon file everywhere, and crop the reference set's matching light/dark
+  pair instead of only preparing one variant.
 - 2026-09-08 — Replaced the emoji-style colored ibis favicon/header mark with a
   monochrome ibis-and-torn-page mark cropped from a user-supplied reference
   PNG. Learning — an agent hand-drawing brand/logo art from scratch (even
