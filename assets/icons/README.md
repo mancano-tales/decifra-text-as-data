@@ -20,9 +20,20 @@ Decifra bridges unstructured natural language with structured, verifiable scient
 
 All assets in this directory are provided with **true alpha transparency** (no bounding box, clean anti-aliased contours) ready for both light and dark backgrounds.
 
+**Current official mark (2026-09-08, author's call)**: `decifra_ibis_standing_hieroglyph_stele.png` (dark)
+and `decifra_ibis_standing_hieroglyph_stele_white.png` (dark-mode), wired into `frontend/public/favicon.{png,svg}`,
+`frontend/public/brand-mark.png`, and their `site/assets/` mirrors. This is the **third** mark promoted to
+"official" in two days — first the Rosetta Stele Flat Base emblem below, then briefly a Squircle mark (promoted
+and reverted same day after failing a 16px legibility test), now this one. **Nothing has been deleted**: every
+prior candidate stays in this directory and in git history as a record of the decision path; only the files
+actually wired into the app (`frontend/public/`, `site/assets/`) get overwritten with each promotion, same as
+before.
+
 | File | Description | Recommended Usage |
 | :--- | :--- | :--- |
-| `rosetta_stele_flat_base_transparent.png` | **Official Application Icon**: Solid Rosetta stele with clean flat base, ibis silhouette, and horizontal text data strata in negative space. | Primary brand mark for web app header, browser favicon, desktop dock icon, and documentation site logo. |
+| `decifra_ibis_standing_hieroglyph_stele.png` | **Current Official Mark**: Full standing sacred ibis (legs, wing detail) beside a Rosetta stele rendered with a woven/hieroglyph-like dash texture instead of plain data bars — the ibis-and-inscribed-stone metaphor drawn literally. | Unified application brand icon: browser favicon, web app header, Tauri desktop icon, Quarto site logo, splash/hero use. Known trade-off, accepted by the author: at 16-32px favicon scale the fine texture and legs are not individually legible. |
+| `decifra_ibis_standing_hieroglyph_stele_white.png` | Inverted white silhouette of the current official mark. | Dark-mode favicon/header equivalent. |
+| `rosetta_stele_flat_base_transparent.png` | **Former official mark (2026-09-07 to 2026-09-08)**: Solid Rosetta stele with clean flat base, ibis silhouette, and horizontal text data strata in negative space. | Superseded; kept as candidate/history. Still viable for contexts wanting the more abstracted (less illustrative) stele treatment. |
 | `ibis_head_s_curve_transparent.png` | Minimalist S-curve bust and curved beak of the sacred ibis (dark stroke). | Primary candidate for browser favicon (16px/32px) and minimal header glyph. |
 | `ibis_head_s_curve_white_transparent.png` | Inverted white S-curve ibis bust for dark mode backgrounds. | Dark-mode favicon, dark UI headers, and terminal CLI badges. |
 | `ibis_standing_monoline_transparent.png` | Standing sacred ibis in clean vector line art with filled head/beak and contoured body. | Documentation diagrams, hero illustrations, and about dialogs. |

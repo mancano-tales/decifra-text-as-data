@@ -1,5 +1,19 @@
 # NEWS
 
+## 2026-09-08 (brand)
+
+- Replaced the official application mark again: `decifra_ibis_standing_hieroglyph_stele.png` (full standing
+  sacred ibis beside a hieroglyph-textured Rosetta stele), author's explicit choice after being shown an
+  empirical 16/24/32px legibility test on the two prior candidates (Squircle mark, Rosetta Stele Flat Base) —
+  accepted the trade-off that fine detail (texture, legs) is not individually legible at favicon scale.
+  Re-wired `frontend/public/favicon.{png,svg}`, `frontend/public/brand-mark.png`, and the `site/assets/`
+  mirrors, following the same embed pattern as the prior promotion. Added a white dark-mode variant.
+  Extracted from a user-pasted chat image (not saved to disk by the user) via the session transcript's stored
+  attachment. Per explicit instruction, **no prior candidate asset was deleted** — `assets/icons/README.md`
+  now documents all three "official" marks in sequence (Rosetta Stele Flat Base → Squircle, reverted → this
+  one) as a decision-history record, and all candidate PNGs/SVGs from 2026-09-07 remain in the directory and
+  in git history unchanged.
+
 ## 2026-09-07 (brand)
 
 - Added candidate brand icon assets in `assets/icons/` with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles, Ancient Egyptian canonical silhouettes, and clean line-art variants, accompanied by technical documentation.
