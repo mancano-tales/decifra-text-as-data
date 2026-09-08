@@ -1,5 +1,9 @@
 # NEWS
 
+## 2026-09-07 (brand)
+
+- Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.
+
 ## 2026-09-07 (MVP handoff)
 
 - Added document-file import UI, persisted provider defaults and OS-keyring credentials, approximate token/cache estimates, optional user-entered prices, and a single-server CLI with a built frontend.

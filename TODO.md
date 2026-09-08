@@ -76,6 +76,8 @@
 
 ## Done
 
+- 2026-09-07 — Added the user-requested ibis brand mark to the application header and favicon, verified in the built frontend.
+
 - 2026-09-07 — MVP handoff: document-upload UI, OS-keyring settings, approximate pre-run token/cache estimate with optional user-supplied prices, single-origin `decifra serve`, visible evidence/audit/errors, preservation of original reviewed answers and exclusion from cache, corpus-scoped validation coverage, and SDK token recording. Frontend lint/build and the full suite passed. A three-document live CLI run started from the browser completed with all evidence verified.
 - Learning — The Windows virtualenv launcher has a child Python process: a persistent server must be managed as a process tree. Approximate estimates must distinguish unknown CLI billing from zero cost, and saved defaults must load before accepting a run.
 
