@@ -1,23 +1,24 @@
 # NEWS
 
+## 2026-09-08 (brand candidates)
+
+- Added the Decifra icon candidate set under `assets/icons/`, including Rosetta-stele and sacred-ibis marks,
+  dark/light variants, and technical usage notes. The current application/site wiring remains the newer
+  `main` branding (`favicon.png` and `logo-navbar.png`); these assets are preserved as candidates for future
+  promotion without overwriting that later decision.
+
+## 2026-09-08 (research)
+
+- Read Halterman & Keith (2026, ACL) "What is a protest anyway?" in full and wrote a dialogue/analysis document (`docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`) — the full paper text was not committed (copyrighted, published work, this repo is public). Identified that the Validation screen currently has no way to detect conceptualization error (an incomplete codebook), as distinct from scoring error (a misapplied one), and that a high Cohen's kappa does not certify a complete codebook even though nothing in the docs or UI currently says so. Added four new `docs/ROADMAP.md` Phase 6 briefs (R6.6-R6.9): a PPI-corrected prevalence estimate for the Validation screen, sharpening `AGENTS.md`'s validation section and the Validation UI to name both error types, a codebook-version-mismatch warning for gold sets, and an ACLED-derived starter codebook.
+
 ## 2026-09-08 (brand)
 
-- Replaced the official application mark again: `decifra_ibis_standing_hieroglyph_stele.png` (full standing
-  sacred ibis beside a hieroglyph-textured Rosetta stele), author's explicit choice after being shown an
-  empirical 16/24/32px legibility test on the two prior candidates (Squircle mark, Rosetta Stele Flat Base) —
-  accepted the trade-off that fine detail (texture, legs) is not individually legible at favicon scale.
-  Re-wired `frontend/public/favicon.{png,svg}`, `frontend/public/brand-mark.png`, and the `site/assets/`
-  mirrors, following the same embed pattern as the prior promotion. Added a white dark-mode variant.
-  Extracted from a user-pasted chat image (not saved to disk by the user) via the session transcript's stored
-  attachment. Per explicit instruction, **no prior candidate asset was deleted** — `assets/icons/README.md`
-  now documents all three "official" marks in sequence (Rosetta Stele Flat Base → Squircle, reverted → this
-  one) as a decision-history record, and all candidate PNGs/SVGs from 2026-09-07 remain in the directory and
-  in git history unchanged.
+- Replaced the emoji-style colored ibis mark with a monochrome ibis-and-torn-page logo, cropped directly from a user-supplied reference PNG (no redrawing by the agent). Serves as both the browser favicon (`favicon.png`) and the header brand mark; the header's colored background square was dropped since the new mark is black-on-transparent.
+- Extended the same mark to the Quarto marketing site (`site/`): favicon, a black-on-white logo in the docked sidebar, and a white-on-dark counterpart (`logo-navbar.png`, cropped from a separate reference PNG) in the dark navbar, since a single black-on-transparent asset disappears against the navbar's dark background.
 
 ## 2026-09-07 (brand)
 
-- Added candidate brand icon assets in `assets/icons/` with true alpha transparency: Rosetta Stone stele marks with sacred ibis profiles, Ancient Egyptian canonical silhouettes, and clean line-art variants, accompanied by technical documentation.
-- Promoted the official **Rosetta Stele Flat Base** mark (`rosetta_stele_flat_base_transparent.png`) across the software: configured `frontend/public/favicon.png` and `favicon.svg`, updated `frontend/src/App.tsx` and `.brand-mark` styling in `frontend/src/index.css`, configured Quarto site branding in `site/assets/` and `site/_quarto.yml`, and updated `assets/icons/README.md`.
+- Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.
 
 ## 2026-09-07 (MVP handoff)
 

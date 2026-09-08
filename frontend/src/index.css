@@ -86,8 +86,6 @@ p {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: transparent;
-  flex-shrink: 0;
   object-fit: contain;
 }
 

@@ -11,9 +11,9 @@ execute:
 
 website:
   title: "Decifra"
-  favicon: assets/favicon.png
   description: "A local-first tool that turns your codebook and a text corpus into a structured, LLM-coded table — validated against human coding, not trusted on faith."
   site-url: https://mancano-tales.github.io/decifra-text-as-data/
+  favicon: favicon.png
 
   repo-url: https://github.com/mancano-tales/decifra-text-as-data
   repo-actions: [source, issue]
@@ -23,8 +23,9 @@ website:
   back-to-top-navigation: true
 
   navbar:
-    logo: assets/favicon.png
     background: dark
+    logo: logo-navbar.png
+    logo-alt: "Decifra"
     left:
       - text: Overview
         href: index.qmd
@@ -44,6 +45,7 @@ website:
 
   sidebar:
     - title: "Decifra"
+      logo: favicon.png
       style: docked
       contents:
         - text: Overview

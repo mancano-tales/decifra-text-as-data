@@ -2,6 +2,21 @@
 
 ## Pending
 
+- 2026-09-08 — `docs/ROADMAP.md` Phase 6 gained four new briefs (R6.6-R6.9)
+  from reading Halterman & Keith (2026, ACL) "What is a protest anyway?"
+  in full (analysis:
+  `docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`).
+  Highest-value: R6.6, a PPI-corrected prevalence estimate on the
+  Validation screen (the paper gives the estimator in closed form) — turns
+  the screen from a QA diagnostic into something that produces an actual
+  citable number. R6.7 corrects `AGENTS.md`'s validation section, which
+  currently doesn't distinguish conceptualization error (incomplete
+  codebook — a high kappa doesn't catch this) from scoring error
+  (LLM/annotator misapplying an otherwise-fine codebook) — the paper's
+  sharpest and most novel point for this project. R6.8 and R6.9 are
+  smaller: a codebook-version-mismatch warning for gold sets, and an
+  ACLED-derived starter codebook for new users.
+
 - 2026-09-07 — After MVP handoff: durable run recovery/cancel/resume, version-scoped gold labels, complete disclosure history, CLI-command-aware cache identity, installer and a larger independent human-coded pilot remain open. See `docs/MVP_TEST_GUIDE.md`.
 
 - 2026-09-07 — Verified alpha, not complete MVP acceptance. Priorities: cost estimate, document import UI, settings/entry point, run recovery, and version-aware scientific audit. See `docs/MVP_STATUS.md` for evidence and remaining work.
@@ -76,6 +91,19 @@
 
 ## Done
 
+- 2026-09-08 — Extended the ibis-and-page brand mark to the Quarto site
+  (favicon, sidebar logo, and a separate white-on-dark navbar logo).
+  Learning — a single black-on-transparent logo asset is not enough once a
+  UI has both light and dark surfaces (this site's navbar is dark, its
+  sidebar is light); check each surface's background before reusing one
+  icon file everywhere, and crop the reference set's matching light/dark
+  pair instead of only preparing one variant.
+- 2026-09-08 — Replaced the emoji-style colored ibis favicon/header mark with a
+  monochrome ibis-and-torn-page mark cropped from a user-supplied reference
+  PNG. Learning — an agent hand-drawing brand/logo art from scratch (even
+  when inspired by a reference image) produces visibly worse results than
+  using the user's own generated art directly; when the user supplies
+  reference images for a logo, crop/resize them, don't redraw them.
 - 2026-09-07 — Added the user-requested ibis brand mark to the application header and favicon, verified in the built frontend.
 
 - 2026-09-07 — MVP handoff: document-upload UI, OS-keyring settings, approximate pre-run token/cache estimate with optional user-supplied prices, single-origin `decifra serve`, visible evidence/audit/errors, preservation of original reviewed answers and exclusion from cache, corpus-scoped validation coverage, and SDK token recording. Frontend lint/build and the full suite passed. A three-document live CLI run started from the browser completed with all evidence verified.
