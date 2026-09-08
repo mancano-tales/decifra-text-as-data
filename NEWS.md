@@ -1,5 +1,15 @@
 # NEWS
 
+## 2026-09-08 (brand, final)
+
+- The PR #3 merge (previous entry below) kept `main`'s ibis-and-page mark live and demoted the PR's
+  standing-ibis + hieroglyph-stele mark to "candidate" — the author's actual instruction, given after that
+  merge landed, was the opposite: the PR's mark should be the one that ships. Corrected in place: replaced
+  `frontend/public/favicon.png`, `site/favicon.png` (dark mark) and `site/logo-navbar.png` (white mark, dark
+  navbar) with `assets/icons/decifra_ibis_standing_hieroglyph_stele{,_white}.png`, and bumped the favicon
+  cache-busting query (`?v=ibis3`) in `frontend/index.html`. No file was deleted — the previously-live
+  bust-ibis-and-page mark and every other candidate remain in `assets/icons/` and in git history.
+
 ## 2026-09-08 (brand candidates)
 
 - Added the Decifra icon candidate set under `assets/icons/`, including Rosetta-stele and sacred-ibis marks,
