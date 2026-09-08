@@ -26,6 +26,7 @@ All assets in this directory are provided with **true alpha transparency** (no b
 | `ibis_head_s_curve_transparent.png` | Minimalist S-curve bust and curved beak of the sacred ibis (dark stroke). | Primary candidate for browser favicon (16px/32px) and minimal header glyph. |
 | `ibis_head_s_curve_white_transparent.png` | Inverted white S-curve ibis bust for dark mode backgrounds. | Dark-mode favicon, dark UI headers, and terminal CLI badges. |
 | `ibis_standing_monoline_transparent.png` | Standing sacred ibis in clean vector line art with filled head/beak and contoured body. | Documentation diagrams, hero illustrations, and about dialogs. |
+| `ibis_standing_monoline_white_transparent.png` | Inverted white standing sacred ibis line art for dark backgrounds. | Dark-mode documentation diagrams and hero sections. |
 | `rosetta_decifra_logo_transparente.png` | Complete mark: Fractured Rosetta stele, ibis profile, horizontal text strata, and "DECIFRA" wordmark. | Application splash screen, repository banner, documentation header. |
 | `rosetta_decifra_emblema_transparente.png` | Isolated emblem: The fractured stele and ibis profile without lower typography. | Desktop app icon (Tauri / OS dock), primary avatar, favicon candidate. |
 | `ibis_canon_preto_transparente.png` | Full-body sacred ibis in strict Egyptian hieroglyphic canon (Gardiner G26) atop lotus standard (dark stroke). | Academic papers, methodological reports, presentation slides. |
