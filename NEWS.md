@@ -1,5 +1,12 @@
 # NEWS
 
+## 2026-09-08 (brand candidates)
+
+- Added the Decifra icon candidate set under `assets/icons/`, including Rosetta-stele and sacred-ibis marks,
+  dark/light variants, and technical usage notes. The current application/site wiring remains the newer
+  `main` branding (`favicon.png` and `logo-navbar.png`); these assets are preserved as candidates for future
+  promotion without overwriting that later decision.
+
 ## 2026-09-08 (research)
 
 - Read Halterman & Keith (2026, ACL) "What is a protest anyway?" in full and wrote a dialogue/analysis document (`docs/research/2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`) — the full paper text was not committed (copyrighted, published work, this repo is public). Identified that the Validation screen currently has no way to detect conceptualization error (an incomplete codebook), as distinct from scoring error (a misapplied one), and that a high Cohen's kappa does not certify a complete codebook even though nothing in the docs or UI currently says so. Added four new `docs/ROADMAP.md` Phase 6 briefs (R6.6-R6.9): a PPI-corrected prevalence estimate for the Validation screen, sharpening `AGENTS.md`'s validation section and the Validation UI to name both error types, a codebook-version-mismatch warning for gold sets, and an ACLED-derived starter codebook.
