@@ -76,6 +76,12 @@
 
 ## Done
 
+- 2026-09-08 — Replaced the emoji-style colored ibis favicon/header mark with a
+  monochrome ibis-and-torn-page mark cropped from a user-supplied reference
+  PNG. Learning — an agent hand-drawing brand/logo art from scratch (even
+  when inspired by a reference image) produces visibly worse results than
+  using the user's own generated art directly; when the user supplies
+  reference images for a logo, crop/resize them, don't redraw them.
 - 2026-09-07 — Added the user-requested ibis brand mark to the application header and favicon, verified in the built frontend.
 
 - 2026-09-07 — MVP handoff: document-upload UI, OS-keyring settings, approximate pre-run token/cache estimate with optional user-supplied prices, single-origin `decifra serve`, visible evidence/audit/errors, preservation of original reviewed answers and exclusion from cache, corpus-scoped validation coverage, and SDK token recording. Frontend lint/build and the full suite passed. A three-document live CLI run started from the browser completed with all evidence verified.

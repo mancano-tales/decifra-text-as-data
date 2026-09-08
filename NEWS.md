@@ -1,5 +1,9 @@
 # NEWS
 
+## 2026-09-08 (brand)
+
+- Replaced the emoji-style colored ibis mark with a monochrome ibis-and-torn-page logo, cropped directly from a user-supplied reference PNG (no redrawing by the agent). Serves as both the browser favicon (`favicon.png`) and the header brand mark; the header's colored background square was dropped since the new mark is black-on-transparent.
+
 ## 2026-09-07 (brand)
 
 - Replaced the placeholder letter and default Vite favicon with an original emoji-style ibis mark: ivory body, curved dark bill, warm legs and a blue background. The same scalable SVG serves the header and browser tab.

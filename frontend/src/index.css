@@ -86,11 +86,7 @@ p {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: #fff;
-  font-weight: 700;
-  font-size: 13px;
+  object-fit: contain;
 }
 
 .app-title {
