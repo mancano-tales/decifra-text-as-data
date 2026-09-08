@@ -169,7 +169,7 @@
     "href": "index.html",
     "title": "Decifra",
     "section": "",
-    "text": "Turning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.\nLLMs can automate a lot of that reading. But everyone who tries ends up reinventing the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed your specific rules, or just fell back on its own generic idea of the concept.",
+    "text": "NoteMVP pilot update — 2026-09-07\n\n\n\nDocument uploads, approximate token estimates, saved provider settings, evidence inspection and a single-server frontend are now implemented. Run decifra serve after building the frontend. See the repository’s docs/MVP_TEST_GUIDE.md for setup, testing and limitations. Older roadmap statements below describe the preceding alpha audit.",
     "crumbs": [
       "Overview"
     ]
@@ -178,8 +178,8 @@
     "objectID": "index.html#the-problem",
     "href": "index.html#the-problem",
     "title": "Decifra",
-    "section": "",
-    "text": "Turning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.\nLLMs can automate a lot of that reading. But everyone who tries ends up reinventing the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed your specific rules, or just fell back on its own generic idea of the concept.",
+    "section": "The problem",
+    "text": "The problem\nTurning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.\nLLMs can automate a lot of that reading. But everyone who tries ends up reinventing the same pipeline from scratch — and, more importantly, most skip the part that actually makes automated coding trustworthy: checking whether the model followed your specific rules, or just fell back on its own generic idea of the concept.",
     "crumbs": [
       "Overview"
     ]
@@ -189,7 +189,7 @@
     "href": "index.html#what-decifra-is",
     "title": "Decifra",
     "section": "What Decifra is",
-    "text": "What Decifra is\nDecifra is a local-first tool: you author a codebook (a concept, its categories, definitions, examples, boundary notes), point it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.\nIt is not a manual qualitative-coding tool — Taguette, QualCoder, and QualiLab already do that well. Decifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating your own judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become real data — as non-negotiable and non-automatable.",
+    "text": "What Decifra is\nDecifra is a local-first tool: you author a codebook (a concept, its categories, definitions, examples, boundary notes), point it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Results record the prompt, model, provider mode and response (full CLI stdout or serialized parsed API JSON). Historical reporting and manual-edit provenance still need work; see the repository status report.\nIt is not a manual qualitative-coding tool — Taguette, QualCoder, and QualiLab already do that well. Decifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating your own judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become real data — as non-negotiable and non-automatable.",
     "crumbs": [
       "Overview"
     ]
@@ -219,7 +219,7 @@
     "href": "index.html#current-status",
     "title": "Decifra",
     "section": "Current status",
-    "text": "Current status\nDecifra is pre-1.0, under active development. As of this page:\n\nCorpus import — CSV/XLSX/pasted text, with column mapping.\nCodebook editor — structured form with a live YAML preview.\nRuns — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via instructor) or CLI mode (any installed CLI you already have a subscription for).\nResults — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run GUIDE-LLM-shaped AI-use disclosure report.\nValidation — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.\n\nSee How It Works for the pipeline end to end, and Architecture for the technical design and why it looks the way it does.\nSource, issues, and full history: github.com/mancano-tales/decifra-text-as-data.",
+    "text": "Current status\nDecifra is a functional alpha. The five workflow stages exist, but cost estimation and document-file import in the UI are still missing from the original MVP acceptance checklist. As of 2026-09-07:\n\nCorpus import — CSV/XLSX/pasted text in the UI; TXT/Markdown/DOCX/textual PDF through the backend.\nCodebook editor — structured form with a YAML preview after saving.\nRuns — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via instructor) or CLI mode (any installed CLI you already have a subscription for).\nResults — browsable table, inline edits, CSV/XLSX/JSON export, and a backend GUIDE-LLM-shaped report scaffold whose historical provenance and validation text still need work.\nValidation — gold-label CSV import (QualiLab interop is available through the backend), Cohen’s kappa, precision/recall/F1 per category.\n\nSee How It Works for the pipeline end to end, and Architecture for the technical design and why it looks the way it does.\nSource, issues, and full history: github.com/mancano-tales/decifra-text-as-data.",
     "crumbs": [
       "Overview"
     ]

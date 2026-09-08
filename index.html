@@ -387,6 +387,19 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>MVP pilot update — 2026-09-07
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Document uploads, approximate token estimates, saved provider settings, evidence inspection and a single-server frontend are now implemented. Run <code>decifra serve</code> after building the frontend. See the repository’s <code>docs/MVP_TEST_GUIDE.md</code> for setup, testing and limitations. Older roadmap statements below describe the preceding alpha audit.</p>
+</div>
+</div>
 <section id="the-problem" class="level2">
 <h2 class="anchored" data-anchor-id="the-problem">The problem</h2>
 <p>Turning messy text into structured data is a routine need: is this article about a protest? does this statement support or oppose a policy? Does this support ticket describe a billing issue or a bug? Today that mostly means someone reading every document by hand and filling in a spreadsheet against rules they wrote themselves — a codebook.</p>
@@ -394,7 +407,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="what-decifra-is" class="level2">
 <h2 class="anchored" data-anchor-id="what-decifra-is">What Decifra is</h2>
-<p>Decifra is a local-first tool: you author a codebook (a concept, its categories, definitions, examples, boundary notes), point it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Every result carries a full audit trail: the exact prompt sent, the raw response received, which model and provider mode produced it.</p>
+<p>Decifra is a local-first tool: you author a codebook (a concept, its categories, definitions, examples, boundary notes), point it at a text corpus, and the software calls an LLM to fill in a structured results table — one category, one rationale, one quoted evidence span per document. Results record the prompt, model, provider mode and response (full CLI stdout or serialized parsed API JSON). Historical reporting and manual-edit provenance still need work; see the repository status report.</p>
 <p>It is <strong>not</strong> a manual qualitative-coding tool — <a href="https://www.taguette.org/">Taguette</a>, <a href="https://github.com/ccbogel/QualCoder">QualCoder</a>, and <a href="https://github.com/luizpf42/QualiLab">QualiLab</a> already do that well. Decifra is closer to the inverse: it automates the mechanical categorization step so a human doesn’t have to read every row, while treating your own judgment — codebook design, model/parameter choices, and the decision of whether automated output is reliable enough to become real data — as non-negotiable and non-automatable.</p>
 </section>
 <section id="what-automated-does-not-mean" class="level2">
@@ -415,13 +428,13 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="current-status" class="level2">
 <h2 class="anchored" data-anchor-id="current-status">Current status</h2>
-<p>Decifra is pre-1.0, under active development. As of this page:</p>
+<p>Decifra is a functional alpha. The five workflow stages exist, but cost estimation and document-file import in the UI are still missing from the original MVP acceptance checklist. As of 2026-09-07:</p>
 <ul>
-<li><strong>Corpus import</strong> — CSV/XLSX/pasted text, with column mapping.</li>
-<li><strong>Codebook editor</strong> — structured form with a live YAML preview.</li>
+<li><strong>Corpus import</strong> — CSV/XLSX/pasted text in the UI; TXT/Markdown/DOCX/textual PDF through the backend.</li>
+<li><strong>Codebook editor</strong> — structured form with a YAML preview after saving.</li>
 <li><strong>Runs</strong> — kick off an extraction against a corpus + codebook, watch it progress, pick API-key mode (schema enforced via <a href="https://github.com/jxnl/instructor"><code>instructor</code></a>) or CLI mode (any installed CLI you already have a subscription for).</li>
-<li><strong>Results</strong> — browsable table, inline edits, CSV/XLSX/JSON export, and a per-run <a href="https://llm-checklist.com/">GUIDE-LLM</a>-shaped AI-use disclosure report.</li>
-<li><strong>Validation</strong> — gold-label import (including round-tripping with QualiLab), Cohen’s kappa, precision/recall/F1 per category.</li>
+<li><strong>Results</strong> — browsable table, inline edits, CSV/XLSX/JSON export, and a backend <a href="https://llm-checklist.com/">GUIDE-LLM</a>-shaped report scaffold whose historical provenance and validation text still need work.</li>
+<li><strong>Validation</strong> — gold-label CSV import (QualiLab interop is available through the backend), Cohen’s kappa, precision/recall/F1 per category.</li>
 </ul>
 <p>See <a href="./how-it-works.html">How It Works</a> for the pipeline end to end, and <a href="./architecture.html">Architecture</a> for the technical design and why it looks the way it does.</p>
 <p>Source, issues, and full history: <a href="https://github.com/mancano-tales/decifra-text-as-data">github.com/mancano-tales/decifra-text-as-data</a>.</p>
