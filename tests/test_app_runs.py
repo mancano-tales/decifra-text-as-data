@@ -66,7 +66,7 @@ def test_list_runs_returns_run_with_codebook_name_and_counts():
     assert body[0]["total"] == 1
 
 
-def test_update_extraction_changes_categoria_and_justificativa():
+def test_update_extraction_changes_category_and_rationale():
     client, codebook_id, run_id = _make_test_client()
     extraction_id = client.get(f"/runs/{run_id}/results").json()[0]["id"]
 
@@ -82,7 +82,7 @@ def test_update_extraction_changes_categoria_and_justificativa():
     assert body[0]["rationale"] == "corrected by hand"
 
 
-def test_update_extraction_rejects_invalid_categoria():
+def test_update_extraction_rejects_invalid_category():
     client, codebook_id, run_id = _make_test_client()
     extraction_id = client.get(f"/runs/{run_id}/results").json()[0]["id"]
 

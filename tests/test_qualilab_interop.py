@@ -359,7 +359,7 @@ def test_inject_extractions_adds_a_matching_upserted_doc_value():
     assert entry["id"] == "cifra-1-doc-1-cat-a"
 
 
-def test_inject_extractions_rejects_a_categoria_with_no_reverse_mapping():
+def test_inject_extractions_rejects_a_category_with_no_reverse_mapping():
     project = _synthetic_project()
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
     extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
@@ -385,7 +385,7 @@ def test_inject_extractions_rejects_a_value_not_in_declared_options():
         )
 
 
-def test_inject_extractions_skips_error_categoria_instead_of_failing_the_whole_export():
+def test_inject_extractions_skips_error_category_instead_of_failing_the_whole_export():
     # run_extraction records a per-document failure as ERROR_CATEGORY
     # instead of aborting the run -- exporting a run with one failed
     # document among many good ones must not fail the entire export just
