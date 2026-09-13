@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
@@ -92,6 +93,37 @@ def make_api_key_provider(vendor: str, model: str, api_key: str | None = None) -
     return ApiKeyProvider(client=client, model=model)
 
 
+class PromptTooLongError(ValueError):
+    """Raised by `CliProvider` in `prompt_mode="arg"` when the prompt cannot
+    fit on the command line, *before* the CLI is spawned.
+
+    Windows caps a process command line at 32,767 characters. Without this
+    pre-flight, `subprocess.run` surfaced the overflow as
+    `FileNotFoundError: [WinError 206] The filename or extension is too
+    long` -- a message about filenames, for a problem about document
+    length, recorded verbatim as the per-document error in the Results
+    table. Subclasses `ValueError` so it rides the same `except Exception`
+    path in `run_extraction` (one bad document must not kill the run), and
+    so callers that already treat provider `ValueError`s as per-document
+    failures need no change."""
+
+    def __init__(self, *, actual_length: int, limit: int, prompt_length: int, command: list[str]):
+        self.actual_length = actual_length
+        self.limit = limit
+        self.prompt_length = prompt_length
+        self.command = list(command)
+        super().__init__(
+            f"CLI prompt too long for the command line: the full command would be "
+            f"{actual_length} characters (limit {limit}), of which the prompt itself "
+            f"(codebook instructions + document + schema) is {prompt_length} characters. "
+            f"In prompt_mode='arg' the whole prompt is passed as a command-line argument "
+            f"to {command[0]!r}, and Windows caps a process command line at 32,767 "
+            f"characters. To avoid this: use a CLI that reads the prompt from stdin "
+            f"(prompt_mode='stdin', e.g. `claude -p`), or shorten/split this document "
+            f"into chunks that fit."
+        )
+
+
 class CliProvider(Provider):
     """Best-effort path: shells out to an already-installed CLI (e.g. the
     Claude Code CLI, `claude -p`, or a Codex-style CLI) instead of a billed
@@ -100,8 +132,18 @@ class CliProvider(Provider):
     ApiKeyProvider; retry-on-malformed-output is the caller's job
     (extraction.py), not this class's."""
 
+    # A safety margin below Windows' hard 32,767-character cap on a process
+    # command line: subprocess quotes/escapes arguments (list2cmdline) and
+    # the executable's resolved absolute path is part of the count too.
+    WINDOWS_DEFAULT_MAX_ARG_LENGTH = 32_000
+
     def __init__(
-        self, command: list[str], runner=subprocess.run, timeout: int = 180, prompt_mode: str = "stdin"
+        self,
+        command: list[str],
+        runner=subprocess.run,
+        timeout: int = 180,
+        prompt_mode: str = "stdin",
+        max_arg_length: int | None = None,
     ):
         resolved = shutil.which(command[0])
         if resolved is not None:
@@ -112,6 +154,14 @@ class CliProvider(Provider):
         if prompt_mode not in ("stdin", "arg"):
             raise ValueError(f"prompt_mode must be 'stdin' or 'arg', got {prompt_mode!r}")
         self._prompt_mode = prompt_mode
+        # Only meaningful in prompt_mode="arg". `None` means "no limit";
+        # the Windows default is applied only when the caller passed
+        # nothing, so tests (and unusual POSIX setups) can force a limit
+        # on any OS. POSIX ARG_MAX is orders of magnitude larger, so no
+        # default limit there.
+        if max_arg_length is None and sys.platform == "win32":
+            max_arg_length = self.WINDOWS_DEFAULT_MAX_ARG_LENGTH
+        self._max_arg_length = max_arg_length
 
     def extract(self, messages: list[dict], schema: type[BaseModel]) -> ProviderResult:
         prompt = self._build_prompt(messages, schema)
@@ -120,6 +170,7 @@ class CliProvider(Provider):
             # the prompt as a trailing argument rather than reading stdin --
             # `agy -p` with no argument errors "flag needs an argument"
             # instead of blocking on stdin the way `claude -p` does.
+            self._check_command_line_fits(prompt)
             result = self._runner(
                 [*self._command, prompt],
                 input=None,
@@ -144,6 +195,27 @@ class CliProvider(Provider):
         # stripped out is exactly the kind of thing worth being able to
         # inspect later when a result looks off.
         return ProviderResult(parsed=parsed, prompt=prompt, raw_response=result.stdout)
+
+    def _check_command_line_fits(self, prompt: str) -> None:
+        """Pre-flight for prompt_mode="arg": raise `PromptTooLongError` if
+        the full command line (executable + fixed flags + prompt) would
+        exceed `self._max_arg_length`. No-op when the limit is `None`.
+
+        The length is measured on `subprocess.list2cmdline`, which is how
+        `subprocess` actually serializes the argument list on Windows
+        (quoting arguments with spaces, escaping embedded quotes) -- the
+        raw `len(prompt)` undercounts by however much that escaping adds,
+        which for a prompt full of quoted JSON schema is not negligible."""
+        if self._max_arg_length is None:
+            return
+        actual_length = len(subprocess.list2cmdline([*self._command, prompt]))
+        if actual_length > self._max_arg_length:
+            raise PromptTooLongError(
+                actual_length=actual_length,
+                limit=self._max_arg_length,
+                prompt_length=len(prompt),
+                command=self._command,
+            )
 
     _INSTRUCTIONS_EVIDENCE_DELIMITER = "--- FIM DAS INSTRUÇÕES — TEXTO A CLASSIFICAR ABAIXO ---"
 

@@ -23,26 +23,14 @@
   own declaration. Design it before building — this touches the widest
   surface of any pending feature.
 
-- 2026-09-09 — **Bug: `CliProvider` in `arg` mode breaks on long documents
-  under Windows.** `providers.py`'s `extract()` passes the whole prompt as
-  a trailing command-line argument when `prompt_mode="arg"` (required by
-  `agy -p`, which errors instead of reading stdin). Windows caps a process
-  command line at 32,767 characters, so any document whose prompt exceeds
-  that raises `FileNotFoundError: [WinError 206] The filename or extension
-  is too long` before the CLI is ever invoked. Confirmed empirically on
-  2026-09-09: 4% of a 141-document news corpus tripped it, and the failure
-  scales with document length — a corpus of court rulings or transcripts
-  would fail on most rows. This is the third Windows-specific bug in the
-  CLI path (see the Slice 1 Task 10 entries in `AGENTS.md` for the
-  `shutil.which` and `encoding="utf-8"` fixes). Two candidate fixes worth
-  comparing: (a) `agy --input-format stream-json --output-format
-  stream-json` reading NDJSON from stdin — verified reachable, but its
-  messages need an `"event"` field rather than Claude Code's `"type"`, so
-  it is a distinct protocol needing its own adapter and parser for the
-  streamed result; (b) the Claude Agent SDK path already sketched in
-  ROADMAP R2.8, which sidesteps command-line limits entirely. Whichever is
-  chosen, `CliProvider` should fail with a clear, actionable error when a
-  prompt cannot fit, instead of surfacing a raw `WinError 206`.
+- 2026-09-13 — **`CliProvider` `arg` mode: alternative input path for long
+  documents.** The 2026-09-13 fix (see Done) only makes the failure clear;
+  documents whose prompt exceeds the Windows command-line cap still cannot
+  be coded through `agy -p` at all. The open half is an input path that
+  sidesteps the cap: `agy --input-format stream-json --output-format
+  stream-json` over stdin (a distinct NDJSON protocol using `"event"`, not
+  Claude Code's `"type"`, so it needs its own adapter and streamed-result
+  parser) or the Claude Agent SDK path in `docs/ROADMAP.md` R2.8.
 
 - 2026-09-08 — `docs/ROADMAP.md` Phase 6 gained four new briefs (R6.6-R6.9)
   from reading Halterman & Keith (2026, ACL) "What is a protest anyway?"
@@ -132,6 +120,57 @@
   until this is fixed properly.
 
 ## Done
+
+- 2026-09-13 — **Bug: `CliProvider` in `arg` mode breaks on long documents
+  under Windows** (opened 2026-09-09; "clear error" half fixed here, the
+  "alternative input path" half stays open as the 2026-09-13 Pending item
+  above). Original item text: `providers.py`'s `extract()` passes the
+  whole prompt as a trailing command-line argument when
+  `prompt_mode="arg"` (required by `agy -p`, which errors instead of
+  reading stdin). Windows caps a process command line at 32,767
+  characters, so any document whose prompt exceeds that raises
+  `FileNotFoundError: [WinError 206] The filename or extension is too
+  long` before the CLI is ever invoked. Confirmed empirically on
+  2026-09-09: 4% of a 141-document news corpus tripped it, and the failure
+  scales with document length — a corpus of court rulings or transcripts
+  would fail on most rows. This is the third Windows-specific bug in the
+  CLI path (see the Slice 1 Task 10 entries in `AGENTS.md` for the
+  `shutil.which` and `encoding="utf-8"` fixes). Two candidate fixes worth
+  comparing: (a) `agy --input-format stream-json --output-format
+  stream-json` reading NDJSON from stdin — verified reachable, but its
+  messages need an `"event"` field rather than Claude Code's `"type"`, so
+  it is a distinct protocol needing its own adapter and parser for the
+  streamed result; (b) the Claude Agent SDK path already sketched in
+  ROADMAP R2.8, which sidesteps command-line limits entirely. Whichever is
+  chosen, `CliProvider` should fail with a clear, actionable error when a
+  prompt cannot fit, instead of surfacing a raw `WinError 206`.
+  **What shipped**: `CliProvider.extract()` now pre-flights the command
+  line in `arg` mode and raises `PromptTooLongError` (a `ValueError`)
+  before spawning anything; the message states the full command-line
+  length, the limit, the prompt length, and the two ways out
+  (`prompt_mode="stdin"` CLI, or shorten/split the document). Default
+  limit 32,000 on `win32` (safety margin under 32,767), none elsewhere;
+  overridable via the new `max_arg_length` constructor kwarg. Because it
+  subclasses `ValueError`, `run_extraction`'s existing per-document
+  `except Exception` records it as an `ERROR` row with the readable
+  message and the run still finishes as `done` — no change to
+  `extraction.py` or `app.py` was needed (verified by a new end-to-end
+  test in `tests/test_extraction_run.py`). 6 new tests total.
+  **Learnings**: assumed going in that `len(prompt)` was the number to
+  compare against the cap; it is not — `subprocess` serializes the list
+  through `list2cmdline`, which quotes and escapes, and the resolved
+  absolute path of the executable counts too, so the check measures
+  `list2cmdline([*command, prompt])` instead. Surprising: the full
+  `pytest` suite in a fresh worktree failed collection with
+  `ModuleNotFoundError: keyring` even though `keyring>=25.0` is declared
+  in `pyproject.toml` — the editable install is stale (see the memory note
+  on the dead-worktree editable install), so a fresh worktree has to
+  `pip install keyring` (or reinstall the package) before the full suite
+  runs at all. Next time: when a provider raises a deterministic error
+  (like this one), `_extract_with_retry`'s `tenacity` decorator still
+  retries it 3 times with backoff (~3 s wasted per affected document);
+  harmless but worth a `retry_if_not_exception_type(PromptTooLongError)`
+  if arg-mode corpora with many long documents become common.
 
 - 2026-09-08 — Extended the ibis-and-page brand mark to the Quarto site
   (favicon, sidebar logo, and a separate white-on-dark navbar logo).
