@@ -105,15 +105,15 @@ class ExtractionRecord(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     run_id: int = Field(foreign_key="runs.id")
     document_id: int = Field(foreign_key="documents.id")
-    categoria: str
-    justificativa: str
-    trecho_evidencia: str
-    # Whether trecho_evidencia was found verbatim (or near-verbatim, modulo
+    category: str
+    rationale: str
+    evidence_span: str
+    # Whether evidence_span was found verbatim (or near-verbatim, modulo
     # quote/dash/whitespace normalization) in the source document -- see
     # extraction.py's verify_evidence_span(). Ported from QualiHolo (issue
     # #2): until this existed, a hallucinated or paraphrased quote passed
     # through unnoticed. Flagged for the researcher to see, not used to
-    # invalidate categoria -- this repo's stance is that automated software
+    # invalidate category -- this repo's stance is that automated software
     # surfaces the signal, the researcher's judgment decides what to do
     # with it (see AGENTS.md's Product Vision).
     evidence_verified: bool = False
@@ -152,6 +152,39 @@ def _sqlite_column_type(column) -> str:
         return _SQLITE_TYPE_BY_PYTHON_TYPE.get(column.type.python_type, "TEXT")
     except NotImplementedError:
         return "TEXT"
+
+
+# (table, old column name, new column name). Renames applied in place to a
+# pre-existing SQLite file before the additive migration below runs.
+# 2026-09-13: the three output fields dropped their Portuguese identifiers
+# (R1.1 step 1) -- an English codebase should not leak Portuguese into its
+# data contract, and the multi-variable work that follows needs neutral
+# names it can generalize. Append here, never edit, if a later rename is
+# needed; each entry is guarded ("old exists and new does not") so it is a
+# no-op on a fresh database and on an already-migrated one.
+_LEGACY_COLUMN_RENAMES: tuple[tuple[str, str, str], ...] = (
+    ("extractions", "categoria", "category"),
+    ("extractions", "justificativa", "rationale"),
+    ("extractions", "trecho_evidencia", "evidence_span"),
+)
+
+
+def _apply_legacy_renames(dbapi_connection) -> None:
+    """Rename columns a pre-existing SQLite file still has under an old
+    name. Must run *before* `_ensure_columns`, otherwise that function
+    would ADD the new column next to the old one and the data would be
+    stranded in a column the model no longer reads.
+
+    Guarded per entry: only when the old column exists and the new one
+    does not. `RENAME COLUMN` needs SQLite >= 3.25 (2018); Python 3.12's
+    bundled SQLite is far newer."""
+    for table, old, new in _LEGACY_COLUMN_RENAMES:
+        existing = {
+            row[1] for row in dbapi_connection.execute(f'PRAGMA table_info("{table}")').fetchall()
+        }
+        if not existing or old not in existing or new in existing:
+            continue
+        dbapi_connection.execute(f'ALTER TABLE "{table}" RENAME COLUMN "{old}" TO "{new}"')
 
 
 def _ensure_columns(dbapi_connection) -> None:
@@ -214,6 +247,7 @@ def get_engine(db_url: str = "sqlite:///decifra.sqlite"):
 
     SQLModel.metadata.create_all(engine)
     with engine.connect() as connection:
+        _apply_legacy_renames(connection.connection)
         _ensure_columns(connection.connection)
         connection.connection.commit()
     return engine
