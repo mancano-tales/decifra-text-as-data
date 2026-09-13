@@ -158,9 +158,9 @@ export interface ExtractionResult {
   id: number;
   run_id: number;
   document_id: number;
-  categoria: string;
-  justificativa: string;
-  trecho_evidencia: string;
+  category: string;
+  rationale: string;
+  evidence_span: string;
   tokens_used: number | null;
   document_snippet: string;
   evidence_verified: boolean;
@@ -207,13 +207,13 @@ export async function createRun(request: CreateRunRequest): Promise<{ run_id: nu
 export async function updateExtraction(
   runId: number,
   extractionId: number,
-  categoria: string,
-  justificativa: string
+  category: string,
+  rationale: string
 ): Promise<ExtractionResult> {
   const response = await fetch(`${API_BASE}/runs/${runId}/results/${extractionId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ categoria, justificativa }),
+    body: JSON.stringify({ category, rationale }),
   });
   return handleResponse(response);
 }

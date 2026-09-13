@@ -22,14 +22,14 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
   const { t } = useTranslation();
   const [categoryFilter, setCategoryFilter] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editCategoria, setEditCategoria] = useState("");
-  const [editJustificativa, setEditJustificativa] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editRationale, setEditRationale] = useState("");
   const [savingId, setSavingId] = useState<number | null>(null);
 
   function startEdit(row: ExtractionResult) {
     setEditingId(row.id);
-    setEditCategoria(row.categoria);
-    setEditJustificativa(row.justificativa);
+    setEditCategory(row.category);
+    setEditRationale(row.rationale);
   }
 
   function cancelEdit() {
@@ -40,7 +40,7 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
     if (savingId === row.id) return;
     setSavingId(row.id);
     try {
-      const updated = await updateExtraction(runId, row.id, editCategoria, editJustificativa);
+      const updated = await updateExtraction(runId, row.id, editCategory, editRationale);
       onResultsChange((prev) => prev.map((r) => (r.id === row.id ? updated : r)));
       // Only clear the edit UI if the user is still editing this same row --
       // if they've since clicked "Edit" on a different row while this save
@@ -54,18 +54,18 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
     }
   }
 
-  const filteredResults = categoryFilter ? results.filter((r) => r.categoria === categoryFilter) : results;
+  const filteredResults = categoryFilter ? results.filter((r) => r.category === categoryFilter) : results;
   // The filter must also list categories that actually occur in the
   // results but aren't in the current codebook -- the "__error__"
   // sentinel from a failed extraction, or a label since removed from the
   // codebook -- otherwise there's no way to filter down to exactly the
   // rows that need review.
-  const filterOptions = Array.from(new Set([...codebookLabels, ...results.map((r) => r.categoria)]));
+  const filterOptions = Array.from(new Set([...codebookLabels, ...results.map((r) => r.category)]));
 
   return (
     <div>
       <h3 className="card-title">{t("runs.resultsTitle")}</h3>
-      {results.some(r=>r.categoria === "__error__") && <div className="banner-error">{t("runs.documentErrors",{count:results.filter(r=>r.categoria === "__error__").length})}</div>}
+      {results.some(r=>r.category === "__error__") && <div className="banner-error">{t("runs.documentErrors",{count:results.filter(r=>r.category === "__error__").length})}</div>}
       <div className="field">
         <label className="field-label" htmlFor="results-category-filter">
           {t("runs.filterByCategory")}
@@ -109,8 +109,8 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
                 <td>{row.document_snippet}</td>
                 <td>
                   {editingId === row.id ? (
-                    <select value={editCategoria} onChange={(e) => setEditCategoria(e.target.value)}>
-                      {/* row.categoria can be a value not in codebookLabels -- the
+                    <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)}>
+                      {/* row.category can be a value not in codebookLabels -- the
                           "__error__" sentinel, or a label since removed from the
                           codebook. A <select> whose value matches no <option>
                           silently falls back to displaying the first option as
@@ -119,9 +119,9 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
                           original (invalid) value with no visible warning.
                           Surfacing it as its own option keeps what's displayed
                           in sync with what would actually be saved. */}
-                      {!codebookLabels.includes(editCategoria) && (
-                        <option value={editCategoria}>
-                          {t("runs.unknownCategory", { value: editCategoria })}
+                      {!codebookLabels.includes(editCategory) && (
+                        <option value={editCategory}>
+                          {t("runs.unknownCategory", { value: editCategory })}
                         </option>
                       )}
                       {codebookLabels.map((label) => (
@@ -131,18 +131,18 @@ export function ResultsTable({ runId, results, codebookLabels, onResultsChange, 
                       ))}
                     </select>
                   ) : (
-                    <span className="pill">{row.categoria}</span>
+                    <span className="pill">{row.category}</span>
                   )}
                 </td>
                 <td>
                   {editingId === row.id ? (
-                    <textarea value={editJustificativa} onChange={(e) => setEditJustificativa(e.target.value)} />
+                    <textarea value={editRationale} onChange={(e) => setEditRationale(e.target.value)} />
                   ) : (
-                    row.justificativa
+                    row.rationale
                   )}
                 </td>
                 <td>
-                  <blockquote>{row.trecho_evidencia || "—"}</blockquote>
+                  <blockquote>{row.evidence_span || "—"}</blockquote>
                   <span className="pill">{t(row.evidence_verified ? "runs.evidenceVerified" : "runs.evidenceUnverified")}</span>
                   <details><summary>{t("runs.audit")}</summary><h4>{t("runs.prompt")}</h4><pre>{row.prompt_sent}</pre><h4>{t("runs.response")}</h4><pre>{row.raw_response}</pre>{row.original_result_json && <><h4>{t("runs.original")}</h4><pre>{row.original_result_json}</pre></>}</details>
                 </td>
