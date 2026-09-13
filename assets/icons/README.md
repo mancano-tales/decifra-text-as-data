@@ -54,3 +54,14 @@ before.
   - Dark strokes: Deep Slate (`#0F172A`) / Carbon Black (`#09090B`).
   - Light strokes: Pure White (`#FFFFFF`) / Off-White (`#F8FAFC`).
 - **Compatibility**: High DPI / Retina ready (minimum 500px resolution, down-scalable to 16px).
+
+## `source-generations/` — raw generations behind the official mark
+
+Added 2026-09-13. The seven `2026-09-08_chatgpt_ibis_stele_generation_NN.png`
+files are the untouched image-model outputs the author produced on 2026-09-08
+while iterating on the standing-ibis + hieroglyph-stele concept; the shipped
+`decifra_ibis_standing_hieroglyph_stele.{png,svg}` was cropped/traced from this
+set rather than redrawn (see the 2026-09-08 learning in `TODO.md`: crop the
+user's reference art, don't redraw it). They sat untracked at the repo root for
+five days; they are kept here, per the "nothing is deleted" rule above, as the
+provenance of the current mark. Not wired into the app.

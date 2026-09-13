@@ -24,3 +24,6 @@ site/_site/
 site/.quarto/
 
 src/text_as_data/static/
+
+# Ephemeral state of the superpowers brainstorm server (pids, html scratch)
+.superpowers/
