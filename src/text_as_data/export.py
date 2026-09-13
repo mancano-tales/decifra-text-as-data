@@ -14,7 +14,7 @@ _ILLEGAL_XML_CHARS_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
 def _defuse_formula(value):
     """Prefix a leading `=`/`+`/`-`/`@` with a single quote so spreadsheet
     apps (Excel, LibreOffice) render the cell as text instead of executing
-    it as a formula -- a document's text or an LLM's justificativa can
+    it as a formula -- a document's text or an LLM's rationale can
     start with any of these by pure chance, not just from an attacker, and
     CSV injection (CWE-1236) is a real code-execution vector once someone
     opens the export.
@@ -46,7 +46,7 @@ def results_to_csv_bytes(rows: list[dict]) -> bytes:
     writer.writeheader()
     writer.writerows({k: _defuse_formula(v) for k, v in row.items()} for row in rows)
     # utf-8-sig (BOM) so Excel on Windows doesn't fall back to ANSI and
-    # garble non-ASCII text (this project's justificativa fields are
+    # garble non-ASCII text (this project's rationale fields are
     # routinely Portuguese, e.g. "não", "codificação").
     return buffer.getvalue().encode("utf-8-sig")
 

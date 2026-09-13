@@ -16,7 +16,7 @@ VALID_SPEC = {
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        parsed = schema(categoria="protest", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="protest", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -42,7 +42,7 @@ def _document_id(client, run_id: int) -> int:
 def test_upload_gold_labels_creates_human_label_rows():
     client, codebook_id, run_id = _make_test_client()
     document_id = _document_id(client, run_id)
-    csv_content = f"document_id,gold_categoria\n{document_id},not_protest\n".encode("utf-8")
+    csv_content = f"document_id,gold_category\n{document_id},not_protest\n".encode("utf-8")
 
     response = client.post(
         f"/runs/{run_id}/gold-labels",
@@ -56,7 +56,7 @@ def test_upload_gold_labels_creates_human_label_rows():
 def test_upload_gold_labels_skips_blank_rows_without_error():
     client, codebook_id, run_id = _make_test_client()
     document_id = _document_id(client, run_id)
-    csv_content = f"document_id,gold_categoria\n{document_id},\n".encode("utf-8")
+    csv_content = f"document_id,gold_category\n{document_id},\n".encode("utf-8")
 
     response = client.post(
         f"/runs/{run_id}/gold-labels",
@@ -70,7 +70,7 @@ def test_upload_gold_labels_skips_blank_rows_without_error():
 def test_upload_gold_labels_rejects_whole_file_on_invalid_category():
     client, codebook_id, run_id = _make_test_client()
     document_id = _document_id(client, run_id)
-    csv_content = f"document_id,gold_categoria\n{document_id},not_a_real_label\n".encode("utf-8")
+    csv_content = f"document_id,gold_category\n{document_id},not_a_real_label\n".encode("utf-8")
 
     response = client.post(
         f"/runs/{run_id}/gold-labels",
@@ -83,7 +83,7 @@ def test_upload_gold_labels_rejects_whole_file_on_invalid_category():
 
 def test_upload_gold_labels_404_for_unknown_run():
     client, codebook_id, run_id = _make_test_client()
-    csv_content = b"document_id,gold_categoria\n1,protest\n"
+    csv_content = b"document_id,gold_category\n1,protest\n"
 
     response = client.post(
         "/runs/999/gold-labels",
@@ -95,7 +95,7 @@ def test_upload_gold_labels_404_for_unknown_run():
 
 def test_upload_gold_labels_422_on_missing_required_columns():
     client, codebook_id, run_id = _make_test_client()
-    csv_content = b"id,categoria\n1,protest\n"
+    csv_content = b"id,category\n1,protest\n"
 
     response = client.post(
         f"/runs/{run_id}/gold-labels",
@@ -107,7 +107,7 @@ def test_upload_gold_labels_422_on_missing_required_columns():
 
 def test_upload_gold_labels_422_on_non_integer_document_id():
     client, codebook_id, run_id = _make_test_client()
-    csv_content = b"document_id,gold_categoria\nnot-a-number,protest\n"
+    csv_content = b"document_id,gold_category\nnot-a-number,protest\n"
 
     response = client.post(
         f"/runs/{run_id}/gold-labels",
@@ -120,11 +120,11 @@ def test_upload_gold_labels_422_on_non_integer_document_id():
 def test_upload_gold_labels_reimport_replaces_the_manual_correction_instead_of_adding_a_coder():
     client, codebook_id, run_id = _make_test_client()
     document_id = _document_id(client, run_id)
-    csv_content = f"document_id,gold_categoria\n{document_id},not_protest\n".encode("utf-8")
+    csv_content = f"document_id,gold_category\n{document_id},not_protest\n".encode("utf-8")
     client.post(f"/runs/{run_id}/gold-labels", files={"file": ("gold.csv", csv_content, "text/csv")})
 
     # Re-upload correcting the same document's value.
-    corrected = f"document_id,gold_categoria\n{document_id},protest\n".encode("utf-8")
+    corrected = f"document_id,gold_category\n{document_id},protest\n".encode("utf-8")
     response = client.post(f"/runs/{run_id}/gold-labels", files={"file": ("gold.csv", corrected, "text/csv")})
 
     assert response.status_code == 200
@@ -134,8 +134,8 @@ def test_upload_gold_labels_reimport_replaces_the_manual_correction_instead_of_a
     assert report["coverage"] == {"labeled": 1, "total": 1, "excluded_multi_coder": 0}
 
 
-def _upload_gold(client, run_id, document_id, categoria):
-    csv_content = f"document_id,gold_categoria\n{document_id},{categoria}\n".encode("utf-8")
+def _upload_gold(client, run_id, document_id, category):
+    csv_content = f"document_id,gold_category\n{document_id},{category}\n".encode("utf-8")
     response = client.post(
         f"/runs/{run_id}/gold-labels", files={"file": ("gold.csv", csv_content, "text/csv")}
     )

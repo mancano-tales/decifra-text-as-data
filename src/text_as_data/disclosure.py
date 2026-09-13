@@ -71,7 +71,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
     total_documents = len(
         session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == run.corpus_id)).all()
     )
-    error_count = sum(1 for e in extractions if e.categoria == "__error__")
+    error_count = sum(1 for e in extractions if e.category == "__error__")
 
     provider_label = "Anthropic/OpenAI API (via instructor)" if run.provider_mode == "api_key" else "local CLI"
 

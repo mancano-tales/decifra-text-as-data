@@ -283,8 +283,8 @@ def get_run_results(run_id: int, engine=Depends(get_engine_dependency)):
 
 
 class UpdateExtractionRequest(BaseModel):
-    categoria: str
-    justificativa: str
+    category: str
+    rationale: str
 
 
 @app.put("/runs/{run_id}/results/{extraction_id}")
@@ -302,19 +302,19 @@ def update_extraction(
 
         codebook = session.get(CodebookRecord, run.codebook_id)
         valid_labels = {c["label"] for c in spec_from_yaml_string(codebook.yaml_raw)["categories"]}
-        if request.categoria not in valid_labels:
+        if request.category not in valid_labels:
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    f"categoria {request.categoria!r} is not a valid label for this codebook; "
+                    f"category {request.category!r} is not a valid label for this codebook; "
                     f"expected one of {sorted(valid_labels)}"
                 ),
             )
 
         if not extraction.original_result_json:
-            extraction.original_result_json = json.dumps({"categoria": extraction.categoria, "justificativa": extraction.justificativa, "trecho_evidencia": extraction.trecho_evidencia}, ensure_ascii=False)
-        extraction.categoria = request.categoria
-        extraction.justificativa = request.justificativa
+            extraction.original_result_json = json.dumps({"category": extraction.category, "rationale": extraction.rationale, "evidence_span": extraction.evidence_span}, ensure_ascii=False)
+        extraction.category = request.category
+        extraction.rationale = request.rationale
         session.add(extraction)
         session.commit()
         session.refresh(extraction)
@@ -325,7 +325,7 @@ def update_extraction(
 async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=Depends(get_engine_dependency)):
     """Upload hand-reviewed gold labels for a run, from a CSV shaped like
     `GET /runs/{run_id}/export?format=csv`'s own output plus one more
-    column: `gold_categoria` (blank for rows not yet reviewed). All-or-
+    column: `gold_category` (blank for rows not yet reviewed). All-or-
     nothing on validity -- a non-blank value that isn't one of the
     codebook's real category labels rejects the whole upload with every
     bad row listed, since a silently-accepted typo would corrupt the gold
@@ -343,18 +343,19 @@ async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=D
         rows = parse_csv_rows(content)
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail=f"could not decode file as UTF-8: {exc}") from exc
-    if not rows or "document_id" not in rows[0] or "gold_categoria" not in rows[0]:
+    if not rows or "document_id" not in rows[0] or "gold_category" not in rows[0]:
         raise HTTPException(
             status_code=422,
-            detail="file must have 'document_id' and 'gold_categoria' columns "
-            "(export a run's results and add a gold_categoria column to it)",
+            detail="file must have 'document_id' and 'gold_category' columns "
+            "(export a run's results and add a gold_category column to it; "
+            "the column was named gold_categoria before 2026-09-13)",
         )
 
     to_import: list[tuple[int, str]] = []
     skipped_blank = 0
     bad_rows: list[str] = []
     for row in rows:
-        value = (row.get("gold_categoria") or "").strip()
+        value = (row.get("gold_category") or "").strip()
         if not value:
             skipped_blank += 1
             continue
@@ -443,7 +444,7 @@ def get_run_validation(run_id: int, engine=Depends(get_engine_dependency)):
             single_gold[document_id] = categories[0]
 
         predicted_rows = [
-            {"id": e.document_id, "categoria": e.categoria} for e in extractions if e.document_id in single_gold
+            {"id": e.document_id, "category": e.category} for e in extractions if e.document_id in single_gold
         ]
 
         if not predicted_rows:
@@ -459,15 +460,15 @@ def get_run_validation(run_id: int, engine=Depends(get_engine_dependency)):
 
         predicted_document_ids = {row["id"] for row in predicted_rows}
         gold_df_rows = [
-            {"id": doc_id, "categoria": cat}
+            {"id": doc_id, "category": cat}
             for doc_id, cat in single_gold.items()
             if doc_id in predicted_document_ids
         ]
 
         predicted_df = pd.DataFrame(predicted_rows)
         gold_df = pd.DataFrame(gold_df_rows)
-        report = agreement_report(predicted_df, gold_df, id_col="id", columns=["categoria"])
-        metrics = report["per_column"]["categoria"]
+        report = agreement_report(predicted_df, gold_df, id_col="id", columns=["category"])
+        metrics = report["per_column"]["category"]
 
         extraction_by_document = {e.document_id: e for e in extractions}
         disagreements = []
@@ -566,11 +567,11 @@ def get_run_reproducibility(run_id: int, compare_to: int, engine=Depends(get_eng
     if not extractions_a or not extractions_b:
         raise HTTPException(status_code=422, detail="both runs must have at least one extraction to compare")
 
-    df_a = pd.DataFrame([{"document_id": e.document_id, "categoria": e.categoria} for e in extractions_a])
-    df_b = pd.DataFrame([{"document_id": e.document_id, "categoria": e.categoria} for e in extractions_b])
+    df_a = pd.DataFrame([{"document_id": e.document_id, "category": e.category} for e in extractions_a])
+    df_b = pd.DataFrame([{"document_id": e.document_id, "category": e.category} for e in extractions_b])
 
     try:
-        report = reproducibility_report(df_a, df_b, id_col="document_id", columns=["categoria"])
+        report = reproducibility_report(df_a, df_b, id_col="document_id", columns=["category"])
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

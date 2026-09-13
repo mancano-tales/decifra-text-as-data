@@ -94,10 +94,54 @@ def test_get_engine_adds_evidence_verification_columns_to_an_existing_extraction
 
     with Session(engine) as session:
         loaded = session.exec(
-            select(ExtractionRecord).where(ExtractionRecord.trecho_evidencia == "a literal quote")
+            select(ExtractionRecord).where(ExtractionRecord.evidence_span == "a literal quote")
         ).first()
         assert loaded is not None
         # New columns exist and fall back to their model-declared defaults
         # for a pre-existing row, rather than erroring or being NULL.
         assert loaded.evidence_verified is False
         assert loaded.evidence_match_tier == ""
+
+
+def test_get_engine_renames_legacy_portuguese_columns_in_place(tmp_path):
+    """A decifra.sqlite written before 2026-09-13 has `categoria`,
+    `justificativa`, `trecho_evidencia` on `extractions`. get_engine() must
+    rename them to `category`, `rationale`, `evidence_span` without losing
+    the row, and must be idempotent (a second get_engine() on the same
+    file is a no-op)."""
+    url = _temp_sqlite_url(tmp_path)
+    raw_path = url.removeprefix("sqlite:///")
+
+    connection = sqlite3.connect(raw_path)
+    connection.execute(
+        "CREATE TABLE extractions ("
+        "id INTEGER PRIMARY KEY, run_id INTEGER, document_id INTEGER, "
+        "categoria TEXT, justificativa TEXT, trecho_evidencia TEXT)"
+    )
+    connection.execute(
+        "INSERT INTO extractions (run_id, document_id, categoria, justificativa, trecho_evidencia) "
+        "VALUES (1, 1, 'protest', 'because', 'a literal quote')"
+    )
+    connection.commit()
+    connection.close()
+
+    engine = get_engine(url)
+    with Session(engine) as session:
+        loaded = session.exec(select(ExtractionRecord).where(ExtractionRecord.document_id == 1)).first()
+        assert loaded is not None
+        assert loaded.category == "protest"
+        assert loaded.rationale == "because"
+        assert loaded.evidence_span == "a literal quote"
+
+    # Idempotent: building the engine again on the already-migrated file
+    # must not raise (no "no such column categoria" from a second RENAME).
+    engine_again = get_engine(url)
+    with Session(engine_again) as session:
+        assert session.exec(select(ExtractionRecord)).first().category == "protest"
+
+    # The old column names are gone, not duplicated alongside the new ones.
+    connection = sqlite3.connect(raw_path)
+    columns = {row[1] for row in connection.execute('PRAGMA table_info("extractions")').fetchall()}
+    connection.close()
+    assert {"category", "rationale", "evidence_span"} <= columns
+    assert not ({"categoria", "justificativa", "trecho_evidencia"} & columns)

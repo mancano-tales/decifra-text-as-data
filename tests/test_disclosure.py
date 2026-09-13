@@ -42,11 +42,11 @@ def _make_run(provider_mode: str = "api_key", provider_detail: str = "claude-son
             ExtractionRecord(
                 run_id=run.id,
                 document_id=document.id,
-                categoria="protest",
-                justificativa="because",
-                trecho_evidencia="occupied the square",
+                category="protest",
+                rationale="because",
+                evidence_span="occupied the square",
                 prompt_sent='[{"role": "system", "content": "..."}]',
-                raw_response='{"categoria": "protest"}',
+                raw_response='{"category": "protest"}',
             )
         )
         session.commit()

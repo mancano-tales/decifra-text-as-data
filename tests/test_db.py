@@ -29,9 +29,9 @@ def test_round_trip_through_all_four_tables():
         extraction = ExtractionRecord(
             run_id=run.id,
             document_id=document.id,
-            categoria="quase_certa",
-            justificativa="because...",
-            trecho_evidencia="the quoted span",
+            category="quase_certa",
+            rationale="because...",
+            evidence_span="the quoted span",
         )
         session.add(extraction)
         session.commit()
@@ -39,7 +39,7 @@ def test_round_trip_through_all_four_tables():
 
     with Session(engine, expire_on_commit=False) as session:
         loaded = session.get(ExtractionRecord, extraction.id)
-        assert loaded.categoria == "quase_certa"
+        assert loaded.category == "quase_certa"
         assert loaded.run_id == run.id
         assert loaded.document_id == document.id
 
@@ -104,9 +104,9 @@ def test_foreign_keys_are_enforced():
         extraction = ExtractionRecord(
             run_id=999,
             document_id=999,
-            categoria="quase_certa",
-            justificativa="because...",
-            trecho_evidencia="the quoted span",
+            category="quase_certa",
+            rationale="because...",
+            evidence_span="the quoted span",
         )
         session.add(extraction)
         with pytest.raises(IntegrityError):

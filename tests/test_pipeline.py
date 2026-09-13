@@ -59,15 +59,15 @@ def test_agreement_report_flags_mismatches():
 
 def test_agreement_report_includes_precision_recall_f1_per_category():
     predicted = pd.DataFrame(
-        {"id": [1, 2, 3, 4], "categoria": ["protest", "protest", "not_protest", "protest"]}
+        {"id": [1, 2, 3, 4], "category": ["protest", "protest", "not_protest", "protest"]}
     )
     gold = pd.DataFrame(
-        {"id": [1, 2, 3, 4], "categoria": ["protest", "not_protest", "not_protest", "protest"]}
+        {"id": [1, 2, 3, 4], "category": ["protest", "not_protest", "not_protest", "protest"]}
     )
 
     report = agreement_report(predicted, gold)
 
-    metrics = report["per_column"]["categoria"]
+    metrics = report["per_column"]["category"]
     assert set(metrics["precision"].keys()) == {"protest", "not_protest"}
     # 3 rows predicted "protest" (1, 2, 4); 2 of those are actually gold "protest" (1, 4) -> 2/3
     assert metrics["precision"]["protest"] == pytest.approx(2 / 3)
@@ -81,12 +81,12 @@ def test_agreement_report_kappa_is_json_serializable_none_not_nan_for_single_lab
     # Every row is the same category on both sides -- the exact "LLM always
     # predicts the majority class" case kappa exists to catch. sklearn
     # returns nan (not an error) here, and nan isn't valid JSON.
-    predicted = pd.DataFrame({"id": [1, 2, 3], "categoria": ["protest", "protest", "protest"]})
-    gold = pd.DataFrame({"id": [1, 2, 3], "categoria": ["protest", "protest", "protest"]})
+    predicted = pd.DataFrame({"id": [1, 2, 3], "category": ["protest", "protest", "protest"]})
+    gold = pd.DataFrame({"id": [1, 2, 3], "category": ["protest", "protest", "protest"]})
 
     report = agreement_report(predicted, gold)
 
-    kappa = report["per_column"]["categoria"]["kappa"]
+    kappa = report["per_column"]["category"]["kappa"]
     assert kappa is None
     import json
 
@@ -101,8 +101,8 @@ def test_agreement_report_raises_a_clear_error_when_no_ids_overlap():
     # the run's own document ids) merge to an empty DataFrame -- sklearn's
     # metric functions raise a cryptic "Found empty input array" ValueError
     # on that instead of a message pointing at the actual problem.
-    predicted = pd.DataFrame({"id": [1, 2], "categoria": ["protest", "not_protest"]})
-    gold = pd.DataFrame({"id": [99, 100], "categoria": ["protest", "not_protest"]})
+    predicted = pd.DataFrame({"id": [1, 2], "category": ["protest", "not_protest"]})
+    gold = pd.DataFrame({"id": [99, 100], "category": ["protest", "not_protest"]})
 
     with pytest.raises(ValueError, match="no overlapping"):
         agreement_report(predicted, gold)
@@ -113,8 +113,8 @@ def test_agreement_report_raises_a_clear_error_on_duplicate_gold_ids():
     # multi-coder gold set (db.py's HumanLabelRecord deliberately allows
     # more than one label per document for inter-rater work) would
     # otherwise silently fan out the merge, inflating the sample size.
-    predicted = pd.DataFrame({"id": [1, 2], "categoria": ["protest", "not_protest"]})
-    gold = pd.DataFrame({"id": [1, 1, 2], "categoria": ["protest", "not_protest", "not_protest"]})
+    predicted = pd.DataFrame({"id": [1, 2], "category": ["protest", "not_protest"]})
+    gold = pd.DataFrame({"id": [1, 1, 2], "category": ["protest", "not_protest", "not_protest"]})
 
     with pytest.raises(ValueError, match="more than one row"):
         agreement_report(predicted, gold)

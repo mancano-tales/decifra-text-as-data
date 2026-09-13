@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 
 from text_as_data.codebook import Codebook
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
-from text_as_data.extraction import ERROR_CATEGORIA, run_extraction
+from text_as_data.extraction import ERROR_CATEGORY, run_extraction
 from text_as_data.providers import Provider, ProviderResult
 
 YAML_SOURCE = """
@@ -24,7 +24,7 @@ class CountingFakeProvider(Provider):
 
     def extract(self, messages, schema):
         self.calls += 1
-        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="yes", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -67,7 +67,7 @@ def test_run_extraction_creates_one_extraction_per_document_and_marks_run_done()
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
         run = session.get(RunRecord, run_id)
         assert len(extractions) == 2
-        assert all(e.categoria == "yes" for e in extractions)
+        assert all(e.category == "yes" for e in extractions)
         assert run.status == "done"
     assert provider.calls == 2
 
@@ -105,10 +105,10 @@ def test_run_extraction_records_real_error_message_and_still_marks_run_done():
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
         run = session.get(RunRecord, run_id)
         assert len(extractions) == 1
-        assert extractions[0].categoria == ERROR_CATEGORIA
+        assert extractions[0].category == ERROR_CATEGORY
         # The real error message must survive, not a tenacity RetryError wrapper.
-        assert extractions[0].justificativa == "rate limited: 429"
-        assert "RetryError" not in extractions[0].justificativa
+        assert extractions[0].rationale == "rate limited: 429"
+        assert "RetryError" not in extractions[0].rationale
         assert run.status == "done"
     assert provider.calls == 3  # retried up to the stop_after_attempt(3) limit
 
@@ -140,17 +140,17 @@ def test_run_extraction_records_prompt_too_long_as_readable_per_document_error(m
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
         run = session.get(RunRecord, run_id)
         assert len(extractions) == 1
-        assert extractions[0].categoria == ERROR_CATEGORIA
-        assert "too long for the command line" in extractions[0].justificativa
-        assert "limit 200" in extractions[0].justificativa
-        assert "stdin" in extractions[0].justificativa
+        assert extractions[0].category == ERROR_CATEGORY
+        assert "too long for the command line" in extractions[0].rationale
+        assert "limit 200" in extractions[0].rationale
+        assert "stdin" in extractions[0].rationale
         assert run.status == "done"
 
 
 def test_run_extraction_truncates_a_huge_error_message():
     # A subprocess.TimeoutExpired's str() includes whatever partial
     # stdout/stderr was captured before the kill -- for a CLI provider that
-    # can be large. Nothing should land verbatim in the justificativa
+    # can be large. Nothing should land verbatim in the rationale
     # column at unbounded length, regardless of exception type.
     engine = get_engine("sqlite://")
     run_id, _ = _seed(engine, n_documents=1)
@@ -161,9 +161,9 @@ def test_run_extraction_truncates_a_huge_error_message():
 
     with Session(engine) as session:
         extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).first()
-        assert extraction.categoria == ERROR_CATEGORIA
-        assert len(extraction.justificativa) < len(huge_message)
-        assert extraction.justificativa.endswith("[truncated]")
+        assert extraction.category == ERROR_CATEGORY
+        assert len(extraction.rationale) < len(huge_message)
+        assert extraction.rationale.endswith("[truncated]")
 
 
 def test_run_extraction_does_not_treat_error_row_as_cached():
@@ -190,7 +190,7 @@ def test_run_extraction_does_not_treat_error_row_as_cached():
     with Session(engine) as session:
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
         assert len(extractions) == 1
-        assert extractions[0].categoria == "yes"
+        assert extractions[0].category == "yes"
 
 
 def test_run_extraction_records_build_messages_failure_as_error_row_without_crashing(monkeypatch):
@@ -210,8 +210,8 @@ def test_run_extraction_records_build_messages_failure_as_error_row_without_cras
         run = session.get(RunRecord, run_id)
         # Both documents get an error row instead of crashing the run.
         assert len(extractions) == 2
-        assert all(e.categoria == ERROR_CATEGORIA for e in extractions)
-        assert all(e.justificativa == "mojibake broke build_messages" for e in extractions)
+        assert all(e.category == ERROR_CATEGORY for e in extractions)
+        assert all(e.rationale == "mojibake broke build_messages" for e in extractions)
         assert run.status == "done"  # not stuck at "running"
     # build_messages fails before provider.extract is ever reached, and a
     # build_messages failure must not be pointlessly retried.
@@ -242,7 +242,7 @@ def test_run_extraction_persists_best_effort_prompt_on_provider_failure():
 
     with Session(engine) as session:
         extraction = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).one()
-        assert extraction.categoria == ERROR_CATEGORIA
+        assert extraction.category == ERROR_CATEGORY
         assert extraction.prompt_sent != ""
         assert "document 0" in extraction.prompt_sent
 
@@ -368,7 +368,7 @@ def test_run_extraction_marks_run_as_error_on_setup_failure_instead_of_hanging()
 
 
 class QuotingFakeProvider(Provider):
-    """Returns a trecho_evidencia that is an exact substring of whatever
+    """Returns a evidence_span that is an exact substring of whatever
     document text it's asked to classify -- for testing the "verified"
     path of run_extraction's evidence-span check without hand-writing the
     document text to match a hardcoded quote."""
@@ -376,12 +376,12 @@ class QuotingFakeProvider(Provider):
     def extract(self, messages, schema):
         document_text = messages[-1]["content"]
         quote = document_text[:12]  # long enough to clear the too_short cutoff
-        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia=quote)
+        parsed = schema(category="yes", rationale="because", evidence_span=quote)
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
 class FabricatingFakeProvider(Provider):
-    """Always returns a trecho_evidencia that is long enough to clear the
+    """Always returns a evidence_span that is long enough to clear the
     too_short cutoff but never actually appears in the document text -- the
     fabricated/paraphrased-quote case verify_evidence_span exists to
     catch, distinct from CountingFakeProvider's "quote" (which is too
@@ -390,9 +390,9 @@ class FabricatingFakeProvider(Provider):
 
     def extract(self, messages, schema):
         parsed = schema(
-            categoria="yes",
-            justificativa="because",
-            trecho_evidencia="this exact sentence never appears in the source document",
+            category="yes",
+            rationale="because",
+            evidence_span="this exact sentence never appears in the source document",
         )
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 

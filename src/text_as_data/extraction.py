@@ -97,7 +97,7 @@ from .providers import Provider
 
 logger = logging.getLogger(__name__)
 
-ERROR_CATEGORIA = "__error__"
+ERROR_CATEGORY = "__error__"
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10), reraise=True)
@@ -173,17 +173,17 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                             RunRecord.model == run.model,
                             RunRecord.provider_mode == run.provider_mode,
                             ExtractionRecord.original_result_json == "",
-                            ExtractionRecord.categoria != ERROR_CATEGORIA,
+                            ExtractionRecord.category != ERROR_CATEGORY,
                         )
                         .order_by(ExtractionRecord.id.desc())
                     ).first()
 
                 if cached is not None:
                     tokens_used = 0
-                    categoria, justificativa, trecho = (
-                        cached.categoria,
-                        cached.justificativa,
-                        cached.trecho_evidencia,
+                    category, rationale, evidence_span = (
+                        cached.category,
+                        cached.rationale,
+                        cached.evidence_span,
                     )
                     evidence_verified, evidence_match_tier = (
                         cached.evidence_verified,
@@ -200,10 +200,10 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                         messages = codebook.build_messages(document.text, include_persona=include_persona)
                         prompt_sent = json.dumps(messages, ensure_ascii=False)
                         result = _extract_with_retry(provider, messages, codebook.schema)
-                        categoria, justificativa, trecho = (
-                            result.parsed.categoria,
-                            result.parsed.justificativa,
-                            result.parsed.trecho_evidencia,
+                        category, rationale, evidence_span = (
+                            result.parsed.category,
+                            result.parsed.rationale,
+                            result.parsed.evidence_span,
                         )
                         prompt_sent, raw_response = result.prompt, result.raw_response
                         tokens_used = result.tokens_used
@@ -217,17 +217,17 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                         error_message = str(exc)
                         if len(error_message) > 2000:
                             error_message = error_message[:2000] + "... [truncated]"
-                        categoria, justificativa, trecho = ERROR_CATEGORIA, error_message, ""
+                        category, rationale, evidence_span = ERROR_CATEGORY, error_message, ""
 
-                    evidence_verified, evidence_match_tier = verify_evidence_span(trecho, document.text)
+                    evidence_verified, evidence_match_tier = verify_evidence_span(evidence_span, document.text)
 
                 session.add(
                     ExtractionRecord(
                         run_id=run.id,
                         document_id=document.id,
-                        categoria=categoria,
-                        justificativa=justificativa,
-                        trecho_evidencia=trecho,
+                        category=category,
+                        rationale=rationale,
+                        evidence_span=evidence_span,
                         evidence_verified=evidence_verified,
                         evidence_match_tier=evidence_match_tier,
                         prompt_sent=prompt_sent,

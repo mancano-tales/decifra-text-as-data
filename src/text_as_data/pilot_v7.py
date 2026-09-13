@@ -285,7 +285,7 @@ def build_joint_hypothesis_messages_and_schema(
     the answer even with the *same* enriched instructions.
 
     Deliberately NOT built on the general `Codebook` class: that class is
-    architected around exactly one `categoria` field per call, and a
+    architected around exactly one `category` field per call, and a
     joint two-hypothesis judgment fundamentally needs two -- forcing it
     through `Codebook` would mean changing the general engine to support
     one V7-specific experiment, which is exactly what AGENTS.md's
