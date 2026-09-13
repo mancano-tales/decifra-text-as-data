@@ -203,9 +203,9 @@ def extraction_rows(engine, run_ids: dict[tuple[str, str], int]) -> pd.DataFrame
                         "title": meta["title"],
                         "full_evidence_text": doc.text,
                         "hypothesis_full_definition": hypothesis_full_definition(pair_code, side_label),
-                        "categoria": ext.categoria,
-                        "justificativa": ext.justificativa,
-                        "trecho_evidencia": ext.trecho_evidencia,
+                        "categoria": ext.category,
+                        "justificativa": ext.rationale,
+                        "trecho_evidencia": ext.evidence_span,
                         "prompt_sent": ext.prompt_sent,
                         "raw_response": ext.raw_response,
                     }

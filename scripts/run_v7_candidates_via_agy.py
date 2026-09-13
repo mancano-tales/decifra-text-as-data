@@ -148,9 +148,9 @@ def main() -> None:
                         "hypothesis_pair": pair_code,
                         "side": side_label,
                         "hypothesis_full_definition": hypothesis_full_definition,
-                        "agy_categoria": ext.categoria,
-                        "agy_justificativa": ext.justificativa,
-                        "agy_trecho_evidencia": ext.trecho_evidencia,
+                        "agy_categoria": ext.category,
+                        "agy_justificativa": ext.rationale,
+                        "agy_trecho_evidencia": ext.evidence_span,
                         # Audit trail: the exact prompt sent and the raw
                         # (pre-parsing) CLI output received, straight from
                         # ExtractionRecord -- so this spreadsheet is

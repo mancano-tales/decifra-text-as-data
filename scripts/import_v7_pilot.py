@@ -163,7 +163,7 @@ def main(xlsx_path: str) -> None:
             session.add(document)
             session.flush()  # assign document.id without ending the transaction
 
-            for side_label, side_name, other_name, gold_categoria in (
+            for side_label, side_name, other_name, gold_category in (
                 ("a", side_a_name, side_b_name, row["prob_e_dado_h1"]),
                 ("b", side_b_name, side_a_name, row["prob_e_dado_h2"]),
             ):
@@ -174,7 +174,7 @@ def main(xlsx_path: str) -> None:
                         "document_id": document.id,
                         "codebook_id": codebook_record.id,
                         "codebook_name": codebook_record.name,
-                        "gold_categoria": gold_categoria,
+                        "gold_category": gold_category,
                         "gold_justificativa": fix_mojibake(row.get("ek_justificativa_likelihoods") or ""),
                     }
                 )
