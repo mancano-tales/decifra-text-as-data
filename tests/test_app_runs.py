@@ -18,7 +18,7 @@ VALID_SPEC = {
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        parsed = schema(categoria="protest", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="protest", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -46,7 +46,7 @@ def test_get_run_results_includes_document_snippet():
     body = response.json()
     assert len(body) == 1
     assert body[0]["document_snippet"].startswith("About 200 people occupied")
-    assert body[0]["categoria"] == "protest"
+    assert body[0]["category"] == "protest"
 
 
 def test_list_runs_returns_run_with_codebook_name_and_counts():
@@ -72,14 +72,14 @@ def test_update_extraction_changes_categoria_and_justificativa():
 
     response = client.put(
         f"/runs/{run_id}/results/{extraction_id}",
-        json={"categoria": "not_protest", "justificativa": "corrected by hand"},
+        json={"category": "not_protest", "rationale": "corrected by hand"},
     )
 
     assert response.status_code == 200
-    assert response.json()["categoria"] == "not_protest"
+    assert response.json()["category"] == "not_protest"
     body = client.get(f"/runs/{run_id}/results").json()
-    assert body[0]["categoria"] == "not_protest"
-    assert body[0]["justificativa"] == "corrected by hand"
+    assert body[0]["category"] == "not_protest"
+    assert body[0]["rationale"] == "corrected by hand"
 
 
 def test_update_extraction_rejects_invalid_categoria():
@@ -88,7 +88,7 @@ def test_update_extraction_rejects_invalid_categoria():
 
     response = client.put(
         f"/runs/{run_id}/results/{extraction_id}",
-        json={"categoria": "not_a_real_label", "justificativa": "x"},
+        json={"category": "not_a_real_label", "rationale": "x"},
     )
 
     assert response.status_code == 422
@@ -99,7 +99,7 @@ def test_update_extraction_404_for_unknown_extraction():
 
     response = client.put(
         f"/runs/{run_id}/results/999",
-        json={"categoria": "protest", "justificativa": "x"},
+        json={"category": "protest", "rationale": "x"},
     )
 
     assert response.status_code == 404
@@ -122,7 +122,7 @@ def test_export_run_results_json():
 
     assert response.status_code == 200
     body = response.json()
-    assert body[0]["categoria"] == "protest"
+    assert body[0]["category"] == "protest"
 
 
 def test_export_run_results_xlsx():

@@ -341,8 +341,8 @@ def _synthetic_project():
 def test_inject_extractions_adds_a_matching_upserted_doc_value():
     project = _synthetic_project()
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
 
     result = interop.inject_extractions_into_qualilab(
         project, extractions, documents, category_id="cat-a",
@@ -362,8 +362,8 @@ def test_inject_extractions_adds_a_matching_upserted_doc_value():
 def test_inject_extractions_rejects_a_categoria_with_no_reverse_mapping():
     project = _synthetic_project()
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
 
     with pytest.raises(ValueError, match="reverse_value_mapping"):
         interop.inject_extractions_into_qualilab(
@@ -375,8 +375,8 @@ def test_inject_extractions_rejects_a_categoria_with_no_reverse_mapping():
 def test_inject_extractions_rejects_a_value_not_in_declared_options():
     project = _synthetic_project()
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
 
     with pytest.raises(ValueError, match="not a declared option"):
         interop.inject_extractions_into_qualilab(
@@ -386,12 +386,12 @@ def test_inject_extractions_rejects_a_value_not_in_declared_options():
 
 
 def test_inject_extractions_skips_error_categoria_instead_of_failing_the_whole_export():
-    # run_extraction records a per-document failure as ERROR_CATEGORIA
+    # run_extraction records a per-document failure as ERROR_CATEGORY
     # instead of aborting the run -- exporting a run with one failed
     # document among many good ones must not fail the entire export just
     # because "__error__" was never a real codebook category with an
     # entry in reverse_value_mapping.
-    from text_as_data.extraction import ERROR_CATEGORIA
+    from text_as_data.extraction import ERROR_CATEGORY
 
     project = _synthetic_project()
     documents = [
@@ -399,8 +399,8 @@ def test_inject_extractions_skips_error_categoria_instead_of_failing_the_whole_e
         DocumentRecord(id=2, corpus_id="demo", text="goodbye world", external_id="doc-2"),
     ]
     extractions = [
-        ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes", justificativa="x", trecho_evidencia="hello"),
-        ExtractionRecord(id=2, run_id=1, document_id=2, categoria=ERROR_CATEGORIA, justificativa="timed out", trecho_evidencia=""),
+        ExtractionRecord(id=1, run_id=1, document_id=1, category="yes", rationale="x", evidence_span="hello"),
+        ExtractionRecord(id=2, run_id=1, document_id=2, category=ERROR_CATEGORY, rationale="timed out", evidence_span=""),
     ]
 
     result = interop.inject_extractions_into_qualilab(
@@ -419,8 +419,8 @@ def test_inject_extractions_rejects_zero_matched_documents():
     # finding #10 exists to catch (must not silently "succeed" with 0
     # matches).
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id=None)]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
 
     with pytest.raises(ValueError, match="zero documents matched"):
         interop.inject_extractions_into_qualilab(
@@ -436,8 +436,8 @@ def test_inject_extractions_does_not_disturb_existing_codings_or_other_doc_value
          "set_by": "u1", "author_name": "Human Coder", "layer": "final"}
     ]
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
 
     result = interop.inject_extractions_into_qualilab(
         project, extractions, documents, category_id="cat-a",
@@ -458,8 +458,8 @@ def test_reexport_of_the_same_run_upserts_instead_of_duplicating():
     .append()."""
     project = _synthetic_project()
     documents = [DocumentRecord(id=1, corpus_id="demo", text="hello world", external_id="doc-1")]
-    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, categoria="yes",
-                                     justificativa="x", trecho_evidencia="hello")]
+    extractions = [ExtractionRecord(id=1, run_id=1, document_id=1, category="yes",
+                                     rationale="x", evidence_span="hello")]
     original_bytes = json.dumps(project).encode("utf-8")
 
     first = interop.inject_extractions_into_qualilab(

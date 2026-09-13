@@ -18,7 +18,7 @@ class ConstantProvider(Provider):
     """Always answers the same way -- for the "runs agree" case."""
 
     def extract(self, messages, schema):
-        parsed = schema(categoria="protest", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="protest", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -32,8 +32,8 @@ class FlakyProvider(Provider):
 
     def extract(self, messages, schema):
         self.calls += 1
-        categoria = "protest" if self.calls % 2 else "not_protest"
-        parsed = schema(categoria=categoria, justificativa="because", trecho_evidencia="quote")
+        category = "protest" if self.calls % 2 else "not_protest"
+        parsed = schema(category=category, rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -64,7 +64,7 @@ def test_bypass_cache_true_calls_the_provider_even_when_a_cached_answer_exists()
     run_b = _run(client, codebook_id, flaky, bypass_cache=True)
 
     assert flaky.calls == 2  # proves the cache was NOT served for run_b
-    categoria_b = client.get(f"/runs/{run_b}/results").json()[0]["categoria"]
+    categoria_b = client.get(f"/runs/{run_b}/results").json()[0]["category"]
     assert categoria_b == "not_protest"  # flaky's 2nd call -- different from run_a's cached "protest"
 
 
@@ -90,7 +90,7 @@ def test_reproducibility_report_on_identical_runs_is_perfect_agreement():
     body = response.json()
     assert body["run_a"] == run_a
     assert body["run_b"] == run_b
-    assert body["per_column"]["categoria"]["exact_match_rate"] == 1.0
+    assert body["per_column"]["category"]["exact_match_rate"] == 1.0
     assert body["mismatches"] == []
 
 
@@ -104,7 +104,7 @@ def test_reproducibility_report_on_flaky_runs_surfaces_the_disagreement():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["per_column"]["categoria"]["exact_match_rate"] == 0.0
+    assert body["per_column"]["category"]["exact_match_rate"] == 0.0
     assert body["mismatches"][0]["run_a"] == "protest"
     assert body["mismatches"][0]["run_b"] == "not_protest"
 

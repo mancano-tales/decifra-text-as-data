@@ -128,7 +128,7 @@ def test_enriched_codebook_spec_is_a_valid_codebook():
 
     codebook = Codebook._from_spec(spec)
 
-    assert set(codebook.schema.model_fields["categoria"].annotation.__args__) == set(VERBAL_PROBABILITY_LABELS)
+    assert set(codebook.schema.model_fields["category"].annotation.__args__) == set(VERBAL_PROBABILITY_LABELS)
     assert "Scope check" in codebook.instructions
     assert "Boundary notes:" in codebook.instructions
 

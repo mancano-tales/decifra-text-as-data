@@ -41,7 +41,7 @@ VALUE_MAPPING = {
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        parsed = schema(categoria="favoravel", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="favoravel", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 

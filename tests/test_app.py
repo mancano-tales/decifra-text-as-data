@@ -18,7 +18,7 @@ categories:
 
 class FakeProvider(Provider):
     def extract(self, messages, schema):
-        parsed = schema(categoria="yes", justificativa="because", trecho_evidencia="quote")
+        parsed = schema(category="yes", rationale="because", evidence_span="quote")
         return ProviderResult(parsed=parsed, prompt="fake prompt", raw_response="fake raw response")
 
 
@@ -53,7 +53,7 @@ def test_post_runs_then_get_results():
 
     results = client.get(f"/runs/{run_id}/results").json()
     assert len(results) == 1
-    assert results[0]["categoria"] == "yes"
+    assert results[0]["category"] == "yes"
 
 
 def test_post_runs_with_unknown_codebook_returns_404():
@@ -102,7 +102,7 @@ def test_extractions_with_snippets_chunks_the_in_clause(monkeypatch):
         for d in docs:
             session.refresh(d)
         extractions = [
-            ExtractionRecord(run_id=1, document_id=d.id, categoria="yes", justificativa="", trecho_evidencia="")
+            ExtractionRecord(run_id=1, document_id=d.id, category="yes", rationale="", evidence_span="")
             for d in docs
         ]
 

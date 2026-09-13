@@ -15,7 +15,7 @@ def estimate_run(session: Session, record, corpus_id: str, model: str, provider_
         select(ExtractionRecord.document_id).join(RunRecord, ExtractionRecord.run_id == RunRecord.id).where(
             RunRecord.codebook_id == record.id, RunRecord.codebook_yaml_hash == digest,
             RunRecord.model == model, RunRecord.provider_mode == provider_mode,
-            ExtractionRecord.categoria != "__error__", ExtractionRecord.original_result_json == "",
+            ExtractionRecord.category != "__error__", ExtractionRecord.original_result_json == "",
         )).all())
     fresh = [doc for doc in documents if doc.id not in cached_ids]
     schema = json.dumps(book.schema.model_json_schema(), ensure_ascii=False)

@@ -7,8 +7,8 @@ import openpyxl
 from text_as_data.export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 
 SAMPLE_ROWS = [
-    {"document_snippet": "About 200 people occupied...", "categoria": "protest", "justificativa": "clear demand"},
-    {"document_snippet": "A music festival happened...", "categoria": "not_protest", "justificativa": "no claim"},
+    {"document_snippet": "About 200 people occupied...", "category": "protest", "rationale": "clear demand"},
+    {"document_snippet": "A music festival happened...", "category": "not_protest", "rationale": "no claim"},
 ]
 
 
@@ -32,13 +32,13 @@ def test_results_to_csv_bytes_has_utf8_bom_for_excel():
 
 
 def test_results_to_csv_bytes_defuses_leading_formula_characters():
-    rows = [{"justificativa": "=CMD|' /C calc.exe'!A0", "categoria": "x"}]
+    rows = [{"rationale": "=CMD|' /C calc.exe'!A0", "category": "x"}]
 
     content = results_to_csv_bytes(rows)
 
     reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
     row = next(reader)
-    assert row["justificativa"] == "'=CMD|' /C calc.exe'!A0"
+    assert row["rationale"] == "'=CMD|' /C calc.exe'!A0"
 
 
 def test_results_to_csv_bytes_defuses_formula_prefixed_by_leading_whitespace():
@@ -46,13 +46,13 @@ def test_results_to_csv_bytes_defuses_formula_prefixed_by_leading_whitespace():
     # whether a cell is a formula -- a bare `.startswith()` check on the
     # raw value missed this, letting a value like " =cmd|...' " through
     # unquoted.
-    rows = [{"justificativa": "  =CMD|' /C calc.exe'!A0", "categoria": "x"}]
+    rows = [{"rationale": "  =CMD|' /C calc.exe'!A0", "category": "x"}]
 
     content = results_to_csv_bytes(rows)
 
     reader = csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
     row = next(reader)
-    assert row["justificativa"].startswith("'")
+    assert row["rationale"].startswith("'")
 
 
 def test_results_to_xlsx_bytes_round_trips():
@@ -68,7 +68,7 @@ def test_results_to_xlsx_bytes_round_trips():
 
 
 def test_results_to_xlsx_bytes_strips_illegal_control_characters():
-    rows = [{"justificativa": "hello\x0bworld", "categoria": "x"}]
+    rows = [{"rationale": "hello\x0bworld", "category": "x"}]
 
     content = results_to_xlsx_bytes(rows)  # must not raise IllegalCharacterError
 
@@ -81,7 +81,7 @@ def test_results_to_xlsx_bytes_strips_illegal_control_characters():
 
 
 def test_results_to_xlsx_bytes_defuses_leading_formula_characters():
-    rows = [{"justificativa": "=SUM(A1:A10)", "categoria": "x"}]
+    rows = [{"rationale": "=SUM(A1:A10)", "category": "x"}]
 
     content = results_to_xlsx_bytes(rows)
 

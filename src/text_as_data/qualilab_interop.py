@@ -6,7 +6,7 @@ import zipfile
 from dataclasses import dataclass, field
 
 from .db import DocumentRecord, ExtractionRecord, HumanLabelRecord
-from .extraction import ERROR_CATEGORIA
+from .extraction import ERROR_CATEGORY
 
 # See docs/superpowers/specs/2026-09-02-qualilab-interop-design.md for the
 # full design and the three rounds of adversarial review behind every
@@ -271,7 +271,7 @@ def inject_extractions_into_qualilab(
     valid_options = set(category.get("options") or [])
 
     for extraction in extractions:
-        if extraction.categoria == ERROR_CATEGORIA:
+        if extraction.category == ERROR_CATEGORY:
             # run_extraction deliberately records a per-document failure
             # (LLM timeout, malformed output after retries) as this
             # sentinel instead of aborting the whole run -- it was never a
@@ -281,10 +281,10 @@ def inject_extractions_into_qualilab(
             # 1000-document run. Skipped in the injection loop below
             # instead, same as an unmatched external_id.
             continue
-        mapped = reverse_value_mapping.get(extraction.categoria)
+        mapped = reverse_value_mapping.get(extraction.category)
         if mapped is None or (valid_options and mapped not in valid_options):
             raise ValueError(
-                f"categoria {extraction.categoria!r} maps (via reverse_value_mapping) to {mapped!r}, "
+                f"category {extraction.category!r} maps (via reverse_value_mapping) to {mapped!r}, "
                 f"which is not a declared option of category {category_id!r} "
                 f"(options: {sorted(valid_options)})"
             )
@@ -295,7 +295,7 @@ def inject_extractions_into_qualilab(
     matched = 0
     skipped = 0
     for extraction in extractions:
-        if extraction.categoria == ERROR_CATEGORIA:
+        if extraction.category == ERROR_CATEGORY:
             skipped += 1
             continue
         document = document_by_id.get(extraction.document_id)
@@ -315,7 +315,7 @@ def inject_extractions_into_qualilab(
                 "id": entry_id,
                 "document_id": document.external_id,
                 "category_id": category_id,
-                "value": reverse_value_mapping[extraction.categoria],
+                "value": reverse_value_mapping[extraction.category],
                 "set_by": None,  # not a string (finding #8): QualiLab expects a real user id or null
                 "author_name": f"Decifra ({model_label})",
                 "layer": "individual",
