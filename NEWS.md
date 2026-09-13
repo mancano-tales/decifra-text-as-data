@@ -1,5 +1,12 @@
 # NEWS
 
+## 2026-09-13 (R1.1 step 1)
+
+- The extraction output fields are now `category`, `rationale`, `evidence_span` (were `categoria`,
+  `justificativa`, `trecho_evidencia`) in the API, the results table, the QualiLab export and the Python
+  schema; the gold-label CSV column is `gold_category` (was `gold_categoria` — the 422 error names the old
+  name so older files are easy to fix). An existing `decifra.sqlite` is migrated in place on first start.
+
 ## 2026-09-13 (providers)
 
 - `CliProvider` in `prompt_mode="arg"` (the `agy -p` path) now fails clearly when a document's prompt cannot

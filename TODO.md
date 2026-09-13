@@ -121,6 +121,28 @@
 
 ## Done
 
+- 2026-09-13 — R1.1 step 1: renamed the three output fields
+  (`categoria`/`justificativa`/`trecho_evidencia` →
+  `category`/`rationale`/`evidence_span`), `ERROR_CATEGORIA` →
+  `ERROR_CATEGORY`, gold CSV column `gold_categoria` → `gold_category`,
+  across engine, API, frontend, scripts and tests; `db.py` migrates an
+  existing SQLite file in place (`_apply_legacy_renames`, guarded and
+  idempotent, before the additive column migration). No behaviour change;
+  274 tests. Plan: `docs/superpowers/plans/2026-09-13-r1.1-step1-rename-output-fields.md`.
+  Learning — the rename had to be split into "identifiers" and "data":
+  the V7 joint-pair schema fields, the scripts' output CSV column names,
+  the workbook column `ek_justificativa_likelihoods` and the pt-BR locale
+  copy all *look* like the same token but are data and must not change,
+  so a blind `sed` over the repo would have silently altered committed
+  research outputs. Check this split before any future cross-cutting
+  rename. Also: `RENAME COLUMN` must run *before* the additive
+  `_ensure_columns` migration, or the new column is added empty beside the
+  old one and the data is stranded. Two things the plan did not
+  anticipate: `tests/test_pilot_v7.py` read the generic schema field
+  `model_fields["categoria"]` (one more call site to swap), and a
+  whole-word `\bcategoria\b` regex does not match inside
+  `test_..._categoria_...` function names because `_` is a word
+  character — four test names needed a manual follow-up rename.
 - 2026-09-13 — **Bug: `CliProvider` in `arg` mode breaks on long documents
   under Windows** (opened 2026-09-09; "clear error" half fixed here, the
   "alternative input path" half stays open as the 2026-09-13 Pending item

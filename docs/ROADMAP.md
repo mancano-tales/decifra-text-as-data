@@ -74,6 +74,8 @@ component, or function you can point to.
 
 2026-09-13: spec revised to also cover **multi-label** variables (the DATALUTA SDG requirement, `TODO.md` 2026-09-09) — `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`. It supersedes the 2026-09-02 spec where the two differ (§1 has the keep/change/drop table), and lists six author decisions in §11 with recommended defaults. Still awaiting author sign-off; implementation order is the 11-step table in §10.
 
+2026-09-13: step 1 of the §10 plan (rename `categoria`/`justificativa`/`trecho_evidencia` → `category`/`rationale`/`evidence_span`, with in-place SQLite migration) implemented on branch `worktree-agent-a2377fd44cd3c8170` (plan: `docs/superpowers/plans/2026-09-13-r1.1-step1-rename-output-fields.md`); merge into `main` pending; steps 2+ pending.
+
 **Depends on**: nothing (do it before R2.x so nothing else has to migrate
 twice). **Size**: the largest item on this list; multi-day.
 **Spec first**: **yes**, and get the author's sign-off on the YAML shape
