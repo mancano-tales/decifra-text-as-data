@@ -2,6 +2,48 @@
 
 ## Pending
 
+- 2026-09-09 — **Feature: multi-label codebooks.** `codebook.py`'s
+  `_from_spec` builds `categoria=(Literal[tuple(labels)], ...)` — exactly
+  one category per document. That makes a whole class of real coding
+  schemes unrepresentable: the UN SDG scheme the DATALUTA group codes
+  against assigns a mean of 2.5 of 17 labels per news item, and only 24%
+  of their documents carry exactly one. The pilot in
+  `MancanoSync/decifra-dataluta-pilot/` had to work around this by
+  decomposing into N binary one-vs-rest codebooks, which costs N passes
+  over the corpus and loses any joint reasoning across labels. Making it
+  real is not just a schema edit: `categoria` is a fixed contract read by
+  exact field name in `db.py`'s `ExtractionRecord`, `run_extraction`, the
+  export/validation endpoints and the frontend, and `validation.py`'s
+  `agreement_report` assumes single-label when it computes kappa (a
+  multi-label report needs per-label kappa plus a set-agreement measure
+  such as Jaccard or Krippendorff's alpha). Suggested shape: keep
+  single-label as the default and add an opt-in `multi_label: true` in the
+  codebook spec that switches `categoria` to `list[Literal[...]]`, with
+  the DB storing a JSON array and validation branching on the codebook's
+  own declaration. Design it before building — this touches the widest
+  surface of any pending feature.
+
+- 2026-09-09 — **Bug: `CliProvider` in `arg` mode breaks on long documents
+  under Windows.** `providers.py`'s `extract()` passes the whole prompt as
+  a trailing command-line argument when `prompt_mode="arg"` (required by
+  `agy -p`, which errors instead of reading stdin). Windows caps a process
+  command line at 32,767 characters, so any document whose prompt exceeds
+  that raises `FileNotFoundError: [WinError 206] The filename or extension
+  is too long` before the CLI is ever invoked. Confirmed empirically on
+  2026-09-09: 4% of a 141-document news corpus tripped it, and the failure
+  scales with document length — a corpus of court rulings or transcripts
+  would fail on most rows. This is the third Windows-specific bug in the
+  CLI path (see the Slice 1 Task 10 entries in `AGENTS.md` for the
+  `shutil.which` and `encoding="utf-8"` fixes). Two candidate fixes worth
+  comparing: (a) `agy --input-format stream-json --output-format
+  stream-json` reading NDJSON from stdin — verified reachable, but its
+  messages need an `"event"` field rather than Claude Code's `"type"`, so
+  it is a distinct protocol needing its own adapter and parser for the
+  streamed result; (b) the Claude Agent SDK path already sketched in
+  ROADMAP R2.8, which sidesteps command-line limits entirely. Whichever is
+  chosen, `CliProvider` should fail with a clear, actionable error when a
+  prompt cannot fit, instead of surfacing a raw `WinError 206`.
+
 - 2026-09-08 — `docs/ROADMAP.md` Phase 6 gained four new briefs (R6.6-R6.9)
   from reading Halterman & Keith (2026, ACL) "What is a protest anyway?"
   in full (analysis:

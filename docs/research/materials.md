@@ -24,6 +24,22 @@ This directory catalogs primary research papers, literature reviews, codebase de
 - **Not committed to this repo** (copyrighted, published paper; the original PDF lives in the author's own Drive) — see the dialogue doc for why.
 - **Detailed Dialogue**: [`2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`](2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md)
 
+### A3. Mercês et al. (2026) — "LLMs in Deductive Coding" (SBES)
+- **Title**: *Investigating the use of LLMs in Deductive Coding within the Context of Software Engineering*
+- **Venue**: SBES 2026 (CBSoft, IME-USP), Research Track, Sept 9 2026
+- **Authors**: Samuel Mercês, Moaath Alshaikh, Gabriel Cordeiro Moraes, Lucca de Almeida Hora Coutinho, Glauco de Figueiredo Carneiro, Manoel Mendonça, José Amancio Macedo Santos (UEFS / UFBA / UFS)
+- **Open PDF**: `https://cbsoft.sbc.org.br/2026/data/papers/sbes/Investigating the use of LLMs in Deductive Coding within the Context of Software Engineering.pdf`
+- **Summary**: Applies Decifra's core empirical question in another domain (Empathy in SE): can an LLM apply a pre-existing 54-code codebook faithfully? Contributes a reusable five-category agreement/divergence taxonomy, an "Excessive Granularity Bias" finding that scales with codebook size (LLM over-assignment ~28% at 6 codes → ~57% at 15 codes), and a counterintuitive one-shot-beats-few-shot result. Reports no Cohen's kappa and no per-category precision/recall/F1.
+- **Detailed Comparison**: [`2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md`](2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md)
+
+### A4. Lopes et al. (2026) — AnnotAISE (SBES Tools)
+- **Title**: *AnnotAISE: Web-Based Data Annotation Platform For Software Engineering Research*
+- **Venue**: SBES 2026 (CBSoft, IME-USP), Tools Track, Sept 10 2026
+- **Authors**: João Paulo Lopes, Bruno T. Fernandes, Beatriz Ritter, Daniel Coutinho, Robbie Carvalho, Alessandro Garcia, Juliana Alves Pereira (PUC-Rio)
+- **Software**: [`github.com/aisepucrio/annotaise`](https://github.com/aisepucrio/annotaise) (MIT; Django + Next.js + PostgreSQL + Docker Compose)
+- **Summary**: The closest sibling *software* to Decifra that currently exists, built in deliberately opposite directions: its codebook equivalent is an unstructured free-text Markdown guideline, and the LLM enters only as a post-hoc tiebreaker (local models via Ollama) rather than as the coder. Evaluated with TAM (28 participants) — perceived usability, not annotation quality, as the authors concede. Useful to Decifra as a **complementary** gold-label collection tool, not a competitor.
+- **Detailed Comparison**: [`2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md`](2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md)
+
 ### B. DATALUTA News Automation Paper (NERA/UNESP, 2025/2026)
 - **Title**: *O Banco de Dados da Luta pela Terra (DATALUTA): Automatização de Coleta e Registro de Notícias*
 - **Authors**: NERA / UNESP (Sobreiro Filho et al., 2025/2026)
@@ -42,6 +58,7 @@ This directory catalogs primary research papers, literature reviews, codebase de
 | **[`2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md`](2026-09-01_dataluta_paper_analysis_and_cifra_synergy.md)** | Empirical analysis of the NERA/UNESP DATALUTA paper, BERTimbau limitations, and Cifra orchestration synergy. |
 | **[`2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md`](2026-09-01_halterman_keith_codebook_llms_dialogue_and_cifra.md)** | Detailed dialogue with Halterman & Keith (2025) mapping Stage 0–4 framework onto Cifra's architecture. |
 | **[`2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md`](2026-09-08_halterman_keith_protest_anyway_dialogue_and_decifra.md)** | Dialogue with Halterman & Keith (2026, ACL) on conceptualization vs. scoring error; identifies that Decifra's Validation screen currently has no way to detect conceptualization error, and proposes a concrete PPI-corrected prevalence estimator as the highest-value addition. |
+| **[`2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md`](2026-09-08_sbes_deductive_coding_and_annotaise_comparison.md)** | Three-way maturity and quality comparison of Mercês et al. (SBES 2026), Halterman & Keith (ACL 2026), and AnnotAISE. Establishes that none of the three does what Decifra proposes: H&K describe the workflow but ship no code and explicitly caution against automating codebook *conceptualization*; Mercês et al. hand-roll Decifra's engine for one study and recommend guidelines instead of a tool; AnnotAISE builds durable software for the opposite half of the problem. Yields three constraints for Decifra (documented limit on Codebook Editor automation; measure over-coding before shipping R1.1 multi-label; make prompt example count a run parameter). |
 | **[`2026-09-02_state_of_the_project_diagnosis_and_distribution.md`](2026-09-02_state_of_the_project_diagnosis_and_distribution.md)** | Critical diagnosis of the MVP as built vs. the general-purpose product vision, distribution-path cost comparison (pipx / PyInstaller+pywebview / Tauri / hosted), recommended build order, and trajectory risks. Feeds [`docs/ROADMAP.md`](../ROADMAP.md). |
 
 ---
