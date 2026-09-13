@@ -1,5 +1,16 @@
 # NEWS
 
+## 2026-09-13 (providers)
+
+- `CliProvider` in `prompt_mode="arg"` (the `agy -p` path) now fails clearly when a document's prompt cannot
+  fit on the command line: a new `PromptTooLongError` (a `ValueError`) is raised before the CLI is spawned,
+  naming the actual command-line length, the limit (default 32,000 on Windows, none elsewhere, overridable via
+  `max_arg_length`), the prompt length, and how to avoid it (a stdin-capable CLI, or shortening/splitting the
+  document). Previously this surfaced as a bare `FileNotFoundError: [WinError 206]` in the Results table. The
+  error lands as a readable per-document `ERROR` row and the run still completes. The other half of the
+  2026-09-09 item (an input path that sidesteps the cap: `agy` `stream-json` over stdin, or ROADMAP R2.8's
+  Agent SDK) remains open in `TODO.md`.
+
 ## 2026-09-08 (brand, final)
 
 - The PR #3 merge (previous entry below) kept `main`'s ibis-and-page mark live and demoted the PR's

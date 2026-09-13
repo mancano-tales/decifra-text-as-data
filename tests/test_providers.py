@@ -284,3 +284,105 @@ def test_cli_provider_decodes_non_ascii_output_correctly():
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
     assert result.parsed.categoria == text
+
+
+import text_as_data.providers as providers_module
+from text_as_data.providers import PromptTooLongError
+
+
+def _never_called_runner(command, input, capture_output, encoding, timeout):
+    raise AssertionError("runner must not be invoked when the prompt cannot fit on the command line")
+
+
+def test_cli_provider_arg_mode_raises_before_invoking_cli_when_prompt_exceeds_limit(monkeypatch):
+    # Windows caps a process command line at 32,767 characters. In
+    # prompt_mode="arg" the whole prompt rides on the command line, so a
+    # long document made subprocess.run raise a bare
+    # `FileNotFoundError: [WinError 206] The filename or extension is too
+    # long` -- a message that says nothing about documents or prompts.
+    # The provider must pre-flight the length and raise its own clear
+    # error *without* ever spawning the CLI.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    provider = CliProvider(
+        command=["agy", "-p"], runner=_never_called_runner, prompt_mode="arg", max_arg_length=500
+    )
+
+    with pytest.raises(PromptTooLongError):
+        provider.extract(messages=[{"role": "user", "content": "x" * 1000}], schema=Label)
+
+
+def test_cli_provider_prompt_too_long_error_is_a_value_error_with_actionable_message(monkeypatch):
+    # run_extraction's per-document loop catches `Exception` and stores
+    # str(exc) as the row's error -- so the message itself is what the
+    # researcher will read in the Results table. It must name the actual
+    # length, the limit, and what to do about it.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    provider = CliProvider(
+        command=["agy", "-p"], runner=_never_called_runner, prompt_mode="arg", max_arg_length=500
+    )
+
+    with pytest.raises(ValueError) as excinfo:
+        provider.extract(messages=[{"role": "user", "content": "x" * 1000}], schema=Label)
+
+    exc = excinfo.value
+    assert isinstance(exc, PromptTooLongError)
+    message = str(exc)
+    assert exc.actual_length > 500
+    assert exc.prompt_length >= 1000
+    assert str(exc.actual_length) in message
+    assert str(exc.prompt_length) in message
+    assert "500" in message
+    assert "stdin" in message
+    assert "shorten" in message or "split" in message or "chunk" in message
+
+
+def test_cli_provider_arg_mode_under_limit_still_invokes_runner(monkeypatch):
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+    captured = {}
+
+    def capturing_runner(command, input, capture_output, encoding, timeout):
+        captured["command"] = command
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+
+    provider = CliProvider(command=["agy", "-p"], runner=capturing_runner, prompt_mode="arg", max_arg_length=5000)
+    result = provider.extract(messages=[{"role": "user", "content": "x" * 100}], schema=Label)
+
+    assert result.parsed.categoria == "protest"
+    assert captured["command"][:2] == ["agy", "-p"]
+
+
+def test_cli_provider_stdin_mode_ignores_arg_length_limit():
+    # The limit is a command-line concern only. Piping through stdin has
+    # no such ceiling, so even an explicitly tiny max_arg_length must not
+    # affect stdin mode.
+    captured = {}
+
+    def capturing_runner(command, input, capture_output, encoding, timeout):
+        captured["input"] = input
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+
+    provider = CliProvider(command=["fake-cli"], runner=capturing_runner, prompt_mode="stdin", max_arg_length=10)
+    result = provider.extract(messages=[{"role": "user", "content": "x" * 100_000}], schema=Label)
+
+    assert result.parsed.categoria == "protest"
+    assert len(captured["input"]) > 100_000
+
+
+def test_cli_provider_arg_mode_default_limit_is_windows_only(monkeypatch):
+    # Default: 32_000 on Windows (a safety margin under the 32,767 hard
+    # cap), unlimited elsewhere (POSIX ARG_MAX is orders of magnitude
+    # larger). Exercised on any host by patching the module's view of
+    # sys.platform.
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+
+    monkeypatch.setattr(providers_module.sys, "platform", "win32")
+    win = CliProvider(command=["agy", "-p"], runner=_never_called_runner, prompt_mode="arg")
+    assert win._max_arg_length == 32_000
+    with pytest.raises(PromptTooLongError):
+        win.extract(messages=[{"role": "user", "content": "x" * 40_000}], schema=Label)
+
+    monkeypatch.setattr(providers_module.sys, "platform", "linux")
+    posix = CliProvider(command=["agy", "-p"], runner=_fake_runner('{"categoria": "protest"}'), prompt_mode="arg")
+    assert posix._max_arg_length is None
+    result = posix.extract(messages=[{"role": "user", "content": "x" * 40_000}], schema=Label)
+    assert result.parsed.categoria == "protest"

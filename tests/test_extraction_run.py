@@ -113,6 +113,40 @@ def test_run_extraction_records_real_error_message_and_still_marks_run_done():
     assert provider.calls == 3  # retried up to the stop_after_attempt(3) limit
 
 
+def test_run_extraction_records_prompt_too_long_as_readable_per_document_error(monkeypatch):
+    # Regression for the third Windows-specific CliProvider bug: in
+    # prompt_mode="arg" a long document used to die inside subprocess.run
+    # with `FileNotFoundError: [WinError 206]`. The provider now raises
+    # PromptTooLongError before spawning anything; this test proves that
+    # error lands in the Results table as an actionable per-document row
+    # (not a crashed run), via the same catch-all path as any other
+    # provider failure. Uses the real CliProvider, not a fake.
+    import shutil
+
+    from text_as_data.providers import CliProvider
+
+    monkeypatch.setattr(shutil, "which", lambda name: None)
+
+    def never_called_runner(command, input, capture_output, encoding, timeout):
+        raise AssertionError("CLI must not be spawned when the prompt cannot fit on the command line")
+
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1)
+    provider = CliProvider(command=["agy", "-p"], runner=never_called_runner, prompt_mode="arg", max_arg_length=200)
+
+    run_extraction(engine, run_id, provider)
+
+    with Session(engine) as session:
+        extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        run = session.get(RunRecord, run_id)
+        assert len(extractions) == 1
+        assert extractions[0].categoria == ERROR_CATEGORIA
+        assert "too long for the command line" in extractions[0].justificativa
+        assert "limit 200" in extractions[0].justificativa
+        assert "stdin" in extractions[0].justificativa
+        assert run.status == "done"
+
+
 def test_run_extraction_truncates_a_huge_error_message():
     # A subprocess.TimeoutExpired's str() includes whatever partial
     # stdout/stderr was captured before the kill -- for a CLI provider that
