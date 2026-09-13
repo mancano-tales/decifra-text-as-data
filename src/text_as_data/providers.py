@@ -17,7 +17,7 @@ class ProviderResult:
     it: the exact prompt sent and the raw (pre-parsing) response received.
 
     Without this, `run_extraction` could only persist the *parsed*
-    categoria/justificativa/trecho_evidencia -- there was no way to prove,
+    category/rationale/evidence_span -- there was no way to prove,
     after the fact, what an LLM was actually asked or actually said before
     `CliProvider._extract_json` stripped any surrounding prose. For a tool
     whose whole premise is that LLM coding must be auditable and

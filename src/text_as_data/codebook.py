@@ -60,7 +60,7 @@ def validate_spec(spec: dict) -> None:
         # bare truthiness check (`not 0` is True) and would be rejected
         # with the same message as a genuinely missing label, instead of
         # this project's actual requirement: a non-empty string, since
-        # `categoria` is a string everywhere downstream (ExtractionRecord,
+        # `category` is a string everywhere downstream (ExtractionRecord,
         # the frontend, every codebook example in AGENTS.md).
         if not isinstance(label, str) or not label:
             raise ValueError(f"codebook category label must be a non-empty string, got {label!r}")
@@ -143,16 +143,19 @@ class Codebook:
     def _from_spec(cls, spec: dict) -> "Codebook":
         validate_spec(spec)
 
-        # Fixed contract: `categoria`/`justificativa`/`trecho_evidencia` are
-        # relied on by exact field name elsewhere (e.g. db.py's
-        # ExtractionRecord, run_extraction) — renaming here breaks those
-        # call sites silently via AttributeError, not at this layer.
+        # Fixed contract: `category`/`rationale`/`evidence_span` are relied
+        # on by exact field name elsewhere (db.py's ExtractionRecord,
+        # run_extraction, the results/gold/validation endpoints, the
+        # frontend) -- renaming here breaks those call sites silently via
+        # AttributeError, not at this layer. Renamed from the original
+        # Portuguese identifiers on 2026-09-13 (R1.1 step 1); db.py migrates
+        # existing databases in place.
         labels = [c["label"] for c in spec["categories"]]
         schema = create_model(
             "CodebookExtraction",
-            categoria=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
-            justificativa=(str, Field(description="Free-text rationale for the chosen category.")),
-            trecho_evidencia=(
+            category=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
+            rationale=(str, Field(description="Free-text rationale for the chosen category.")),
+            evidence_span=(
                 str,
                 Field(description="Verbatim quote from the document that grounds the decision."),
             ),

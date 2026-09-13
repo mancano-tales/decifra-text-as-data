@@ -54,24 +54,24 @@ def test_estimate_cache_bypass_and_review_exclusion(client):
     with Session(engine) as session:
         run = RunRecord(codebook_id=1, corpus_id="sample", model="test-cli", provider_mode="cli", codebook_yaml_hash=hashlib.sha256(YAML.encode()).hexdigest())
         session.add(run); session.commit(); session.refresh(run)
-        session.add(ExtractionRecord(run_id=run.id, document_id=1,categoria="yes",justificativa="original",trecho_evidencia="collective action")); session.commit()
+        session.add(ExtractionRecord(run_id=run.id, document_id=1,category="yes",rationale="original",evidence_span="collective action")); session.commit()
         run_id = run.id
     assert http.post("/runs/estimate",json=request()).json()["cached_documents"] == 1
     assert http.post("/runs/estimate",json=request(bypass_cache=True)).json()["new_documents"] == 1
     assert http.post("/runs/estimate",json=request(provider_mode="api_key")).json()["new_documents"] == 1
     for reason in ["first review", "second review"]:
-        result = http.put(f"/runs/{run_id}/results/1",json={"categoria":"no","justificativa":reason})
+        result = http.put(f"/runs/{run_id}/results/1",json={"category":"no","rationale":reason})
         assert result.status_code == 200
-        assert json.loads(result.json()["original_result_json"])["justificativa"] == "original"
+        assert json.loads(result.json()["original_result_json"])["rationale"] == "original"
     assert http.post("/runs/estimate",json=request()).json()["new_documents"] == 1
     calls = []
     def extract(messages, schema):
         calls.append(messages)
-        return ProviderResult(parsed=schema(categoria="yes",justificativa="new model answer",trecho_evidencia="collective action"),prompt="test",raw_response="test")
+        return ProviderResult(parsed=schema(category="yes",rationale="new model answer",evidence_span="collective action"),prompt="test",raw_response="test")
     api.app.dependency_overrides[api.get_provider_dependency] = lambda: SimpleNamespace(extract=extract)
     fresh = http.post("/runs",json=request()).json()["run_id"]
     assert len(calls) == 1
-    assert http.get(f"/runs/{fresh}/results").json()[0]["justificativa"] == "new model answer"
+    assert http.get(f"/runs/{fresh}/results").json()[0]["rationale"] == "new model answer"
 
 
 def test_settings_persist_without_returning_or_serializing_key(client, monkeypatch):
@@ -124,8 +124,8 @@ def test_single_origin_serves_frontend_and_keeps_api_routes(tmp_path):
 def test_provider_records_usage_when_sdk_exposes_it():
     from pydantic import BaseModel
     class Label(BaseModel):
-        categoria: str
-    result = Label(categoria="yes")
+        category: str
+    result = Label(category="yes")
     object.__setattr__(result,"_raw_response",SimpleNamespace(usage=SimpleNamespace(input_tokens=80,output_tokens=20)))
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs:result)))
     assert ApiKeyProvider(client,"model").extract([],Label).tokens_used == 100

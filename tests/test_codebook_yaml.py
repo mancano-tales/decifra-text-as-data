@@ -27,8 +27,8 @@ def test_from_yaml_string_builds_schema_with_category_enum():
     codebook = Codebook.from_yaml_string(YAML_SOURCE)
 
     fields = codebook.schema.model_fields
-    assert set(fields) == {"categoria", "justificativa", "trecho_evidencia"}
-    assert set(fields["categoria"].annotation.__args__) == {"protest", "not_protest"}
+    assert set(fields) == {"category", "rationale", "evidence_span"}
+    assert set(fields["category"].annotation.__args__) == {"protest", "not_protest"}
 
 
 def test_from_yaml_string_instructions_include_definitions_and_boundary_notes():
@@ -78,10 +78,10 @@ categories:
     codebook = Codebook.from_yaml_string(yaml_with_bool_like_labels)
 
     fields = codebook.schema.model_fields
-    assert set(fields["categoria"].annotation.__args__) == {"yes", "no"}
+    assert set(fields["category"].annotation.__args__) == {"yes", "no"}
 
-    instance = codebook.schema(categoria="yes", justificativa="said so", trecho_evidencia="\"yes\"")
-    assert instance.categoria == "yes"
+    instance = codebook.schema(category="yes", rationale="said so", evidence_span="\"yes\"")
+    assert instance.category == "yes"
 
 
 def test_from_yaml_string_rejects_empty_categories():
@@ -201,7 +201,7 @@ def test_codebook_from_yaml_string_works_on_output_of_spec_to_yaml_string():
 
     codebook = Codebook.from_yaml_string(yaml_text)
 
-    assert set(codebook.schema.model_fields["categoria"].annotation.__args__) == {"protest", "not_protest"}
+    assert set(codebook.schema.model_fields["category"].annotation.__args__) == {"protest", "not_protest"}
 
 
 def test_from_yaml_file_loads_codebook_from_disk(tmp_path):
@@ -210,7 +210,7 @@ def test_from_yaml_file_loads_codebook_from_disk(tmp_path):
 
     codebook = Codebook.from_yaml_file(str(path))
 
-    assert set(codebook.schema.model_fields["categoria"].annotation.__args__) == {
+    assert set(codebook.schema.model_fields["category"].annotation.__args__) == {
         "protest",
         "not_protest",
     }

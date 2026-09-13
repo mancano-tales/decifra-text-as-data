@@ -4,7 +4,7 @@ from text_as_data.providers import ApiKeyProvider
 
 
 class Label(BaseModel):
-    categoria: str
+    category: str
 
 
 class FakeChatCompletions:
@@ -13,7 +13,7 @@ class FakeChatCompletions:
 
     def create(self, model, response_model, messages, max_retries):
         self.calls += 1
-        return response_model(categoria="protest")
+        return response_model(category="protest")
 
 
 class FakeInstructorClient:
@@ -27,7 +27,7 @@ def test_api_key_provider_delegates_to_instructor_client():
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
     assert fake_client.chat.completions.calls == 1
 
 
@@ -61,12 +61,12 @@ def _fake_runner(stdout: str, returncode: int = 0):
 
 
 def test_cli_provider_parses_json_from_stdout():
-    runner = _fake_runner('Here is the answer:\n{"categoria": "protest"}\nDone.')
+    runner = _fake_runner('Here is the answer:\n{"category": "protest"}\nDone.')
     provider = CliProvider(command=["fake-cli", "-p"], runner=runner)
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
 
 
 def test_cli_provider_raises_on_nonzero_exit():
@@ -93,13 +93,13 @@ def test_cli_provider_skips_non_matching_json_fragment_before_the_answer():
     # pydantic.ValidationError instead of finding the real answer.
     runner = _fake_runner(
         'Let me check the schema first: {"note": "checking the schema"}\n\n'
-        'Here is my answer:\n{"categoria": "protest"}'
+        'Here is my answer:\n{"category": "protest"}'
     )
     provider = CliProvider(command=["fake-cli"], runner=runner)
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
 
 
 def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
@@ -113,13 +113,13 @@ def test_cli_provider_handles_unmatched_brace_inside_json_string_value():
     runner = _fake_runner(
         'Let me check the schema first: {"note": "checking the schema"}\n\n'
         'Here is my answer:\n'
-        '{"justificativa": "cost > 100} threshold exceeded", "categoria": "protest"}'
+        '{"rationale": "cost > 100} threshold exceeded", "category": "protest"}'
     )
     provider = CliProvider(command=["fake-cli"], runner=runner)
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
 
 
 def test_cli_provider_prefers_top_level_object_over_nested_sub_object():
@@ -131,15 +131,15 @@ def test_cli_provider_prefers_top_level_object_over_nested_sub_object():
     # an already-parsed object -- would find the inner object first and
     # return it instead of the real top-level answer that follows.
     runner = _fake_runner(
-        '{"wrapper": {"justificativa": "inner one", "categoria": "inner_match"}, '
+        '{"wrapper": {"rationale": "inner one", "category": "inner_match"}, '
         '"outer_note": "irrelevant"}\n'
-        '{"justificativa": "outer one", "categoria": "outer_match"}'
+        '{"rationale": "outer one", "category": "outer_match"}'
     )
     provider = CliProvider(command=["fake-cli"], runner=runner)
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "outer_match"
+    assert result.parsed.category == "outer_match"
 
 
 def test_cli_provider_resolves_command_via_path(monkeypatch):
@@ -181,7 +181,7 @@ def test_cli_provider_passes_utf8_encoding_to_runner():
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured_kwargs["encoding"] = encoding
         return subprocess.CompletedProcess(
-            args=command, returncode=0, stdout='{"categoria": "protest"}', stderr=""
+            args=command, returncode=0, stdout='{"category": "protest"}', stderr=""
         )
 
     provider = CliProvider(command=["fake-cli"], runner=capturing_runner)
@@ -201,12 +201,12 @@ def test_cli_provider_passes_prompt_as_trailing_arg_when_configured(monkeypatch)
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured["command"] = command
         captured["input"] = input
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"category": "protest"}', stderr="")
 
     provider = CliProvider(command=["agy", "-p"], runner=capturing_runner, prompt_mode="arg")
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
     assert captured["command"][:2] == ["agy", "-p"]
     assert captured["command"][2].startswith("x")
     assert captured["input"] is None
@@ -222,7 +222,7 @@ def test_cli_provider_records_exact_prompt_and_full_raw_stdout_for_audit():
     # was actually sent (not a reconstruction someone has to trust) and
     # what the CLI actually said back, including any surrounding prose
     # _extract_json stripped out to find the answer.
-    stdout = 'Let me think about this.\n{"categoria": "protest"}\nDone thinking.'
+    stdout = 'Let me think about this.\n{"category": "protest"}\nDone thinking.'
     runner = _fake_runner(stdout)
     provider = CliProvider(command=["fake-cli", "-p"], runner=runner)
     messages = [{"role": "system", "content": "codebook instructions here"}, {"role": "user", "content": "the news article text"}]
@@ -243,7 +243,7 @@ def test_cli_provider_inserts_delimiter_between_instructions_and_evidence():
 
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured["input"] = input
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"category": "protest"}', stderr="")
 
     provider = CliProvider(command=["fake-cli"], runner=capturing_runner)
     messages = [{"role": "system", "content": "codebook instructions here"}, {"role": "user", "content": "the evidence text"}]
@@ -263,7 +263,7 @@ def test_cli_provider_omits_delimiter_when_there_is_no_preceding_instructions_bl
 
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured["input"] = input
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"category": "protest"}', stderr="")
 
     provider = CliProvider(command=["fake-cli"], runner=capturing_runner)
 
@@ -278,12 +278,12 @@ def test_cli_provider_decodes_non_ascii_output_correctly():
     # accented characters from the V7 pilot corpus) survives the round
     # trip through extract() unmangled.
     text = "instituições"
-    runner = _fake_runner('{"categoria": "' + text + '"}')
+    runner = _fake_runner('{"category": "' + text + '"}')
     provider = CliProvider(command=["fake-cli"], runner=runner)
 
     result = provider.extract(messages=[{"role": "user", "content": "x"}], schema=Label)
 
-    assert result.parsed.categoria == text
+    assert result.parsed.category == text
 
 
 import text_as_data.providers as providers_module
@@ -342,12 +342,12 @@ def test_cli_provider_arg_mode_under_limit_still_invokes_runner(monkeypatch):
 
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured["command"] = command
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"category": "protest"}', stderr="")
 
     provider = CliProvider(command=["agy", "-p"], runner=capturing_runner, prompt_mode="arg", max_arg_length=5000)
     result = provider.extract(messages=[{"role": "user", "content": "x" * 100}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
     assert captured["command"][:2] == ["agy", "-p"]
 
 
@@ -359,12 +359,12 @@ def test_cli_provider_stdin_mode_ignores_arg_length_limit():
 
     def capturing_runner(command, input, capture_output, encoding, timeout):
         captured["input"] = input
-        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"categoria": "protest"}', stderr="")
+        return subprocess.CompletedProcess(args=command, returncode=0, stdout='{"category": "protest"}', stderr="")
 
     provider = CliProvider(command=["fake-cli"], runner=capturing_runner, prompt_mode="stdin", max_arg_length=10)
     result = provider.extract(messages=[{"role": "user", "content": "x" * 100_000}], schema=Label)
 
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
     assert len(captured["input"]) > 100_000
 
 
@@ -382,7 +382,7 @@ def test_cli_provider_arg_mode_default_limit_is_windows_only(monkeypatch):
         win.extract(messages=[{"role": "user", "content": "x" * 40_000}], schema=Label)
 
     monkeypatch.setattr(providers_module.sys, "platform", "linux")
-    posix = CliProvider(command=["agy", "-p"], runner=_fake_runner('{"categoria": "protest"}'), prompt_mode="arg")
+    posix = CliProvider(command=["agy", "-p"], runner=_fake_runner('{"category": "protest"}'), prompt_mode="arg")
     assert posix._max_arg_length is None
     result = posix.extract(messages=[{"role": "user", "content": "x" * 40_000}], schema=Label)
-    assert result.parsed.categoria == "protest"
+    assert result.parsed.category == "protest"
