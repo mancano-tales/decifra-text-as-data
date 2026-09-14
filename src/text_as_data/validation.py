@@ -110,3 +110,33 @@ def reproducibility_report(
         mismatch["run_a"] = mismatch.pop("predicted")
         mismatch["run_b"] = mismatch.pop("gold")
     return result
+
+
+def _as_label_set(value) -> frozenset[str]:
+    """Normalize a cell holding a set of labels. Accepts set/frozenset/
+    list/tuple (lists may carry duplicates -- a model repeating a label is
+    not a wrong answer, spec §3.2). None/NaN means the empty set."""
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return frozenset()
+    if isinstance(value, str):
+        # A bare string is almost certainly a caller bug (one label passed
+        # where a set was expected); refuse rather than iterate its characters.
+        raise TypeError(f"expected a set of labels, got the string {value!r}")
+    return frozenset(value)
+
+
+def indicator_frame(frame: pd.DataFrame, labels: list[str], *, id_col: str, set_col: str) -> pd.DataFrame:
+    """One 0/1 column per label (codebook order), plus `id_col`. This is the
+    binary decomposition every per-label metric is computed on, kept public
+    because R6.6's PPI prevalence estimator needs exactly these vectors."""
+    known = set(labels)
+    rows = []
+    for _, row in frame.iterrows():
+        present = _as_label_set(row[set_col])
+        unknown = present - known
+        if unknown:
+            raise ValueError(
+                f"{id_col}={row[id_col]!r}: labels {sorted(unknown)} are not in the label list {labels}"
+            )
+        rows.append({id_col: row[id_col], **{label: int(label in present) for label in labels}})
+    return pd.DataFrame(rows, columns=[id_col, *labels]).astype({label: "int64" for label in labels})
