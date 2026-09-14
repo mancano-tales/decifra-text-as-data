@@ -76,6 +76,8 @@ component, or function you can point to.
 
 2026-09-13: step 1 of the §10 plan (rename `categoria`/`justificativa`/`trecho_evidencia` → `category`/`rationale`/`evidence_span`, with in-place SQLite migration) merged into `main` as `078eadd` (plan: `docs/superpowers/plans/2026-09-13-r1.1-step1-rename-output-fields.md`); steps 2+ pending.
 
+2026-09-13: step 2 (codebook contract: variables, multi_label, evidence_granularity, per-variable schema/instructions/hash) implemented on this branch; merge pending.
+
 **Depends on**: nothing (do it before R2.x so nothing else has to migrate
 twice). **Size**: the largest item on this list; multi-day.
 **Spec first**: **yes**, and get the author's sign-off on the YAML shape

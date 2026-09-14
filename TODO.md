@@ -134,6 +134,39 @@
 
 ## Done
 
+- 2026-09-13 — R1.1 step 2: `codebook.py` reads `variables:` (single-label
+  or `multi_label: true` with `min_labels`/`max_labels`/`evidence_granularity`),
+  normalizes the shorthand to one `main` variable, builds one schema +
+  instructions + `spec_hash` per variable, keeps the shorthand
+  byte-identical (schema title `CodebookExtraction`, no `Variable:` block),
+  and `run_extraction` refuses multi-variable codebooks until step 3.
+  326 tests (274 + 52). Plan:
+  `docs/superpowers/plans/2026-09-13-r1.1-step2-codebook-variables-contract.md`.
+  Learning — the plan assumed `multi_label: true` in YAML arrives as a
+  Python `True`; it arrives as the *string* `"true"`, because
+  `_CodebookYamlLoader` strips PyYAML's bool resolver on purpose (so
+  `yes`/`no` labels stay strings). The plan's own two-variable fixture
+  failed on this. Fixed at the YAML boundary (`spec_from_yaml_string`
+  re-applies PyYAML's bool table to the `multi_label` key only), so
+  `validate_spec` keeps its strict boolean rule for the editor's JSON
+  body. Any future boolean codebook key needs the same treatment — check
+  `_coerce_yaml_booleans` before adding one. The byte-identity claim was
+  verified beyond the unit test by diffing the `f86d171` module against
+  the new one (schema name, field order, full JSON schema, instructions,
+  messages) on a fixture with examples, boundary notes and a `yes` label.
+  Pydantic side was uneventful: `create_model` with a nested
+  `list[Selection]` plus `Field(min_length=, max_length=)` emits
+  `minItems`/`maxItems` directly. Step-3 agent, check first: (a) without
+  the interim guard, a two-variable codebook did *not* crash
+  `run_extraction` — `build_messages()`'s `ValueError` was swallowed per
+  document into `__error__` rows and the run finished "done", so the guard
+  is load-bearing, not cosmetic; (b) `run_extraction` takes no `codebook`
+  argument (it loads from `CodebookRecord.yaml_raw`), so the guard sits
+  right after `Codebook.from_yaml_string` inside the existing `try`, which
+  marks the run "error" before re-raising; (c) `Codebook.schema` /
+  `.instructions` are `None` / `""` for multi-variable codebooks —
+  `extraction.py:~200` and `estimate.py:22` must switch to
+  `variable.schema` / `build_messages(text, variable=...)`.
 - 2026-09-13 — R1.1 step 1: renamed the three output fields
   (`categoria`/`justificativa`/`trecho_evidencia` →
   `category`/`rationale`/`evidence_span`), `ERROR_CATEGORIA` →
