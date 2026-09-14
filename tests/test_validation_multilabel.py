@@ -108,3 +108,62 @@ def test_no_nan_anywhere_in_the_report():
             assert not math.isnan(x), "NaN is not valid JSON; report None instead"
 
     walk(report)
+
+
+def test_set_level_agreement_matches_hand_computation():
+    s = multilabel_agreement_report(PREDICTED, GOLD, LABELS, id_col="id", set_col="labels")["set_agreement"]
+    assert s["exact_match_ratio"] == pytest.approx(2 / 6)
+    assert s["mean_jaccard"] == pytest.approx(19 / 36)
+    assert s["mean_predicted_set_size"] == pytest.approx(7 / 6)
+    assert s["mean_gold_set_size"] == pytest.approx(7 / 6)
+    assert s["set_size_ratio"] == pytest.approx(1.0)
+    assert s["documents"] == {"exact": 2, "over_coded": 2, "under_coded": 1, "mixed": 1}
+    assert sum(s["documents"].values()) == 6
+
+
+def test_set_size_ratio_is_none_when_gold_is_all_empty():
+    pred = pd.DataFrame({"id": [1, 2], "labels": [{"a"}, {"a", "b"}]})
+    gold = pd.DataFrame({"id": [1, 2], "labels": [set(), set()]})
+    s = multilabel_agreement_report(pred, gold, LABELS, id_col="id", set_col="labels")["set_agreement"]
+    assert s["mean_gold_set_size"] == 0.0 and s["set_size_ratio"] is None
+    assert s["documents"] == {"exact": 0, "over_coded": 2, "under_coded": 0, "mixed": 0}
+
+
+def test_disagreements_show_the_symmetric_difference_in_codebook_order_sorted_by_size():
+    report = multilabel_agreement_report(PREDICTED, GOLD, LABELS, id_col="id", set_col="labels")
+    rows = report["disagreements"]
+    assert [r["id"] for r in rows] == [4, 2, 3, 6]
+    r4 = rows[0]
+    assert r4["predicted"] == ["c"] and r4["gold"] == ["a", "b"]
+    assert r4["only_predicted"] == ["c"] and r4["only_gold"] == ["a", "b"]
+    r6 = rows[3]
+    assert r6["predicted"] == ["a", "b", "c"]  # codebook order even though input was a set
+    assert r6["only_predicted"] == ["c"] and r6["only_gold"] == []
+    # Details default to an empty dict per over-coded label when none were supplied.
+    assert r6["only_predicted_details"] == {"c": {"rationale": "", "evidence_span": ""}}
+
+
+def test_disagreements_carry_the_per_label_quote_for_each_over_coded_label():
+    details = {6: {"c": {"rationale": "mentions a court", "evidence_span": "o juiz decidiu"},
+                   "a": {"rationale": "unused: a is correct", "evidence_span": "x"}},
+               2: {"b": {"rationale": "b?", "evidence_span": "quote b"}}}
+    report = multilabel_agreement_report(PREDICTED, GOLD, LABELS, id_col="id", set_col="labels",
+                                         predicted_details=details)
+    by_id = {r["id"]: r for r in report["disagreements"]}
+    assert by_id[6]["only_predicted_details"] == {"c": {"rationale": "mentions a court", "evidence_span": "o juiz decidiu"}}
+    assert by_id[2]["only_predicted_details"] == {"b": {"rationale": "b?", "evidence_span": "quote b"}}
+    assert by_id[3]["only_predicted_details"] == {}  # under-coded: nothing over-predicted
+
+
+def test_rejects_duplicate_gold_rows_and_disjoint_ids_like_agreement_report():
+    dup = pd.concat([GOLD, GOLD.iloc[[0]]])
+    with pytest.raises(ValueError, match="more than one row"):
+        multilabel_agreement_report(PREDICTED, dup, LABELS, id_col="id", set_col="labels")
+    with pytest.raises(ValueError, match="no overlapping"):
+        multilabel_agreement_report(PREDICTED, GOLD.assign(id=GOLD["id"] + 100), LABELS, id_col="id", set_col="labels")
+
+
+def test_predicted_ids_missing_from_gold_are_simply_not_scored():
+    extra = pd.concat([PREDICTED, pd.DataFrame({"id": [99], "labels": [{"a"}]})])
+    report = multilabel_agreement_report(extra, GOLD, LABELS, id_col="id", set_col="labels")
+    assert sum(report["set_agreement"]["documents"].values()) == 6

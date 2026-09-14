@@ -237,9 +237,65 @@ def multilabel_agreement_report(
     }
 
 
+def _ordered(labels_present: frozenset[str], labels: list[str]) -> list[str]:
+    return [label for label in labels if label in labels_present]
+
+
 def _set_agreement(merged: pd.DataFrame, labels: list[str]) -> dict:
-    return {}  # Task 3
+    n = len(merged)
+    exact = over = under = mixed = 0
+    jaccards = []
+    for pred, gold in zip(merged["pred"], merged["gold"]):
+        union = pred | gold
+        # Jaccard(∅, ∅) = 1: both sides agree that nothing applies.
+        jaccards.append(1.0 if not union else len(pred & gold) / len(union))
+        if pred == gold:
+            exact += 1
+        elif pred > gold:
+            over += 1     # pred ⊋ gold -- Mercês et al.'s "coding with expansion"
+        elif pred < gold:
+            under += 1    # pred ⊊ gold
+        else:
+            mixed += 1    # neither is a subset of the other
+    mean_pred = float(merged["pred"].map(len).mean())
+    mean_gold = float(merged["gold"].map(len).mean())
+    return {
+        "exact_match_ratio": exact / n,
+        "mean_jaccard": float(sum(jaccards) / n),
+        "mean_predicted_set_size": mean_pred,
+        "mean_gold_set_size": mean_gold,
+        "set_size_ratio": (mean_pred / mean_gold) if mean_gold > 0 else None,
+        "documents": {"exact": exact, "over_coded": over, "under_coded": under, "mixed": mixed},
+    }
 
 
-def _set_disagreements(merged, labels, *, id_col, predicted_details) -> list[dict]:
-    return []  # Task 3
+def _set_disagreements(merged: pd.DataFrame, labels: list[str], *, id_col: str, predicted_details: dict) -> list[dict]:
+    rows = []
+    for _, row in merged.iterrows():
+        pred, gold = row["pred"], row["gold"]
+        if pred == gold:
+            continue
+        only_pred = _ordered(pred - gold, labels)
+        only_gold = _ordered(gold - pred, labels)
+        doc_details = predicted_details.get(row[id_col], {})
+        rows.append(
+            {
+                id_col: row[id_col],
+                "predicted": _ordered(pred, labels),
+                "gold": _ordered(gold, labels),
+                "only_predicted": only_pred,
+                "only_gold": only_gold,
+                # One entry per over-coded label so the reviewer can read
+                # *that label's* quote (spec §3.3/§8.3); empty strings when
+                # the caller had none (per_set variables, human-added labels).
+                "only_predicted_details": {
+                    label: {
+                        "rationale": str(doc_details.get(label, {}).get("rationale", "")),
+                        "evidence_span": str(doc_details.get(label, {}).get("evidence_span", "")),
+                    }
+                    for label in only_pred
+                },
+            }
+        )
+    rows.sort(key=lambda r: (-(len(r["only_predicted"]) + len(r["only_gold"])), r[id_col]))
+    return rows
