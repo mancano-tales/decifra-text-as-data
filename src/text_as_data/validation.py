@@ -140,3 +140,106 @@ def indicator_frame(frame: pd.DataFrame, labels: list[str], *, id_col: str, set_
             )
         rows.append({id_col: row[id_col], **{label: int(label in present) for label in labels}})
     return pd.DataFrame(rows, columns=[id_col, *labels]).astype({label: "int64" for label in labels})
+
+
+def _merge_sets(predicted: pd.DataFrame, gold: pd.DataFrame, *, id_col: str, set_col: str) -> pd.DataFrame:
+    """Same preconditions as agreement_report: one gold row per id, at
+    least one overlapping id. Returns one row per overlapping id with
+    `pred` and `gold` frozenset columns."""
+    if gold[id_col].duplicated().any():
+        dupes = sorted(gold.loc[gold[id_col].duplicated(), id_col].unique().tolist())
+        raise ValueError(
+            f"gold has more than one row for the same {id_col!r} (e.g. {dupes[:5]}) -- "
+            "multilabel_agreement_report expects exactly one gold label set per document; "
+            "pre-aggregate multi-coder gold sets to a single consolidated row per document first"
+        )
+    p = pd.DataFrame({id_col: predicted[id_col], "pred": predicted[set_col].map(_as_label_set)})
+    g = pd.DataFrame({id_col: gold[id_col], "gold": gold[set_col].map(_as_label_set)})
+    merged = p.merge(g, on=id_col)
+    if len(merged) == 0:
+        raise ValueError(
+            f"no overlapping {id_col!r} values between predicted and gold -- "
+            f"predicted has {len(predicted)} rows, gold has {len(gold)} rows, but none share an id"
+        )
+    return merged
+
+
+def _nan_to_none(value):
+    return None if isinstance(value, float) and math.isnan(value) else float(value)
+
+
+def _per_label_metrics(merged: pd.DataFrame, labels: list[str], *, id_col: str) -> dict:
+    pred_ind = indicator_frame(merged.rename(columns={"pred": "s"}), labels, id_col=id_col, set_col="s")
+    gold_ind = indicator_frame(merged.rename(columns={"gold": "s"}), labels, id_col=id_col, set_col="s")
+    out = {}
+    for label in labels:
+        y_true, y_pred = gold_ind[label].to_numpy(), pred_ind[label].to_numpy()
+        tp = int(((y_true == 1) & (y_pred == 1)).sum())
+        fp = int(((y_true == 0) & (y_pred == 1)).sum())
+        tn = int(((y_true == 0) & (y_pred == 0)).sum())
+        precision, recall, f1, _ = precision_recall_fscore_support(
+            y_true, y_pred, labels=[1], average=None, zero_division=0
+        )
+        if y_true.sum() == 0 and y_pred.sum() == 0:
+            # Neither side ever used this label: kappa is undefined (sklearn
+            # emits NaN plus a warning); report None, no warning.
+            kappa = None
+        else:
+            kappa = _nan_to_none(cohen_kappa_score(y_true, y_pred))
+        out[label] = {
+            "kappa": kappa,
+            "precision": float(precision[0]),
+            "recall": float(recall[0]),
+            "f1": float(f1[0]),
+            "false_positive_rate": (fp / (fp + tn)) if (fp + tn) > 0 else None,
+            "predicted_count": int(y_pred.sum()),
+            "gold_count": int(y_true.sum()),
+        }
+    return out
+
+
+def multilabel_agreement_report(
+    predicted: pd.DataFrame,
+    gold: pd.DataFrame,
+    labels: list[str],
+    *,
+    id_col: str = "id",
+    set_col: str = "labels",
+    predicted_details: dict | None = None,
+) -> dict:
+    """Compare predicted label *sets* against gold label sets for one
+    multi-label variable (spec §8.2-8.3).
+
+    Two metric families ship here. Per label, the binary decomposition
+    (kappa, precision/recall/F1, false-positive rate, counts) -- what every
+    published multi-label evaluation reports and what the DATALUTA pilot
+    computed by hand with N one-vs-rest codebooks. At the set level,
+    exact-match ratio and sample-averaged Jaccard, plus the over-/under-
+    coding signals that make Mercês et al.'s "Excessive Granularity Bias"
+    measurable from day one: mean set sizes, their ratio, and a
+    per-document breakdown into exact / over-coded / under-coded / mixed.
+    Chance-corrected *set* agreement (Krippendorff's alpha with MASI,
+    Gwet's AC1) is R6.1's job; this dict leaves it room.
+
+    `labels` is the variable's full label list in codebook order: a label
+    that never occurs still gets a row of zeros instead of vanishing, and
+    every list in the report follows that order. `predicted_details`
+    (optional) maps id -> label -> {"rationale", "evidence_span"} so each
+    over-coded label in a disagreement row carries its own quote (§3.3).
+    `coverage` is the caller's to fill (it knows the corpus size).
+    """
+    merged = _merge_sets(predicted, gold, id_col=id_col, set_col=set_col)
+    return {
+        "kind": "multi_label",
+        "per_label": _per_label_metrics(merged, labels, id_col=id_col),
+        "set_agreement": _set_agreement(merged, labels),
+        "disagreements": _set_disagreements(merged, labels, id_col=id_col, predicted_details=predicted_details or {}),
+    }
+
+
+def _set_agreement(merged: pd.DataFrame, labels: list[str]) -> dict:
+    return {}  # Task 3
+
+
+def _set_disagreements(merged, labels, *, id_col, predicted_details) -> list[dict]:
+    return []  # Task 3
