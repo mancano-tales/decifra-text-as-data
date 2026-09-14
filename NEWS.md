@@ -1,5 +1,12 @@
 # NEWS
 
+## 2026-09-13 (R1.1 step 2)
+
+- A codebook YAML may now declare a `variables:` list (each single-label, or `multi_label: true` with optional
+  `min_labels`/`max_labels`/`evidence_granularity: per_label|per_set`); `Codebook.variables` exposes one schema,
+  instructions block and cache hash per variable. Existing single-variable codebooks are unchanged (same schema,
+  same prompt text). Running a multi-variable codebook is refused with a clear error until the next step wires it.
+
 ## 2026-09-13 (R1.1 step 4)
 
 - `validation.py` gained `multilabel_agreement_report()` (per-label kappa/P/R/F1/FPR/counts, exact-match ratio,

@@ -443,3 +443,39 @@ def test_run_extraction_copies_verification_result_on_cache_hit_instead_of_recom
         ).one()
         assert extraction.evidence_verified is True
         assert extraction.evidence_match_tier == "exact"
+
+
+def test_run_extraction_refuses_a_multi_variable_codebook_until_step_3_wires_it():
+    """Interim guard (R1.1 step 2): a codebook with more than one variable
+    loads fine but must not silently run through the single-variable path.
+    Step 3 replaces this with the real per-variable loop."""
+    yaml_text = (
+        "concept: c\ndescription: d\nvariables:\n"
+        "  - name: a\n    description: q\n    categories:\n      - {label: x, definition: dx}\n"
+        "  - name: b\n    description: q\n    categories:\n      - {label: y, definition: dy}\n"
+    )
+    assert len(Codebook.from_yaml_string(yaml_text).variables) == 2  # loads fine on its own
+    engine = get_engine("sqlite://")
+    with Session(engine) as session:
+        codebook = CodebookRecord(name="two-variable", yaml_raw=yaml_text)
+        session.add(codebook)
+        session.commit()
+        session.refresh(codebook)
+        session.add(DocumentRecord(corpus_id="test_corpus", text="document 0"))
+        session.commit()
+        run = RunRecord(codebook_id=codebook.id, corpus_id="test_corpus", model="fake-model")
+        session.add(run)
+        session.commit()
+        session.refresh(run)
+        run_id = run.id
+    provider = CountingFakeProvider()
+
+    with pytest.raises(NotImplementedError, match="multi-variable"):
+        run_extraction(engine, run_id, provider)
+
+    # The guard fires before any provider call, and the run is marked as
+    # failed rather than left stuck at "running".
+    assert provider.calls == 0
+    with Session(engine) as session:
+        assert session.get(RunRecord, run_id).status == "error"
+        assert session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all() == []
