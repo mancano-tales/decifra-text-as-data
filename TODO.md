@@ -134,6 +134,31 @@
 
 ## Done
 
+- 2026-09-13 — R1.1 step 4: `validation.py` gained `indicator_frame()`,
+  `multilabel_agreement_report()` (per-label kappa/P/R/F1/FPR/counts;
+  exact-match, sample-averaged Jaccard with J(∅,∅)=1, mean set sizes and
+  ratio, exact/over/under/mixed document counts; disagreement rows with the
+  symmetric difference in codebook order and each over-coded label's own
+  quote) and `multilabel_reproducibility_report()`. Pure functions, no
+  app/DB change; 13 tests against a six-document example where every
+  number was derived by hand first. Plan:
+  `docs/superpowers/plans/2026-09-13-r1.1-step4-multilabel-agreement-report.md`.
+  Learning — sklearn 1.9.0's `cohen_kappa_score` on a binary indicator
+  where gold is all-zero but predicted is mixed returns `0.0` silently
+  (po == pe), but when *both* sides are constant (label absent everywhere,
+  or present everywhere) it returns `nan` and emits two warnings
+  (`UndefinedMetricWarning` + a "single label found" `UserWarning`); the
+  absent-everywhere case is short-circuited to `None` before sklearn is
+  called, the present-everywhere case still reaches sklearn and comes back
+  as `None` via `_nan_to_none` (with the warnings). Every hand-derived
+  number in the plan matched on the first run. For the step-6 agent wiring
+  `app.py`: the report is `json.dumps`-clean as returned (ids come out as
+  plain `int` because the frozenset column forces object dtype through
+  `iterrows`); `coverage` is not produced here and must be added by the
+  caller; `_as_label_set` raises `TypeError` on a bare string cell, so
+  decode `selections_json` into a list/set before building the frame;
+  `predicted_details` is keyed by the *same* id values as `id_col`, so
+  build it from the same `document_id` type you put in the frame.
 - 2026-09-13 — R1.1 step 1: renamed the three output fields
   (`categoria`/`justificativa`/`trecho_evidencia` →
   `category`/`rationale`/`evidence_span`), `ERROR_CATEGORIA` →

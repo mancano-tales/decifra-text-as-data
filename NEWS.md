@@ -1,5 +1,11 @@
 # NEWS
 
+## 2026-09-13 (R1.1 step 4)
+
+- `validation.py` gained `multilabel_agreement_report()` (per-label kappa/P/R/F1/FPR/counts, exact-match ratio,
+  mean Jaccard, set-size ratio, exact/over/under/mixed breakdown, disagreement rows with per-label quotes),
+  `multilabel_reproducibility_report()` and the public `indicator_frame()` helper. Library-only; no API change yet.
+
 ## 2026-09-13 (R1.1 step 1)
 
 - The extraction output fields are now `category`, `rationale`, `evidence_span` (were `categoria`,
