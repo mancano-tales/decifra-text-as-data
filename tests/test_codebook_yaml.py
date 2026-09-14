@@ -559,3 +559,54 @@ def test_per_set_instructions_ask_for_one_quote_for_the_set():
     text = Codebook._from_spec(spec).variable("sdg_goals").instructions
     assert "Quote the single passage that best grounds the set as a whole." in text
     assert "Quote the specific passage that grounds each selected category." not in text
+
+
+def test_variable_spec_hash_is_stable_across_yaml_reformatting_and_explicit_form():
+    shorthand = Codebook.from_yaml_string(SHORTHAND_YAML).variables[0]
+    reformatted = Codebook.from_yaml_string(
+        "concept: protest\n"
+        "description: 'A collective public event with a claim.'\n"
+        "categories:\n"
+        "- {label: protest, definition: 'Occupation, march or strike with a demand.', positive_examples: []}\n"
+        "- {label: not_protest, definition: Anything else., boundary_notes: ''}\n"
+    ).variables[0]
+    assert shorthand.spec_hash == reformatted.spec_hash
+    assert len(shorthand.spec_hash) == 64
+
+
+def test_variable_spec_hash_changes_when_the_prompt_changes_and_not_otherwise():
+    base = Codebook.from_yaml_string(TWO_VARIABLE_YAML)
+    # Editing sdg_goals does not touch event_type's hash ...
+    edited = _two_var_spec(max_labels=3)
+    edited_book = Codebook._from_spec(edited)
+    assert edited_book.variable("event_type").spec_hash == base.variable("event_type").spec_hash
+    # ... but does change sdg_goals' own hash (max_labels is in the prompt and schema).
+    assert edited_book.variable("sdg_goals").spec_hash != base.variable("sdg_goals").spec_hash
+    # The codebook-level description is in every variable's prompt, so it is in every hash.
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["description"] = "Changed."
+    assert Codebook._from_spec(spec).variable("event_type").spec_hash != base.variable("event_type").spec_hash
+    # evidence_granularity changes the schema, so it is in the hash.
+    assert Codebook._from_spec(_two_var_spec(evidence_granularity="per_set")).variable("sdg_goals").spec_hash != base.variable("sdg_goals").spec_hash
+
+
+def test_variable_spec_hash_includes_the_prompt_template_version(monkeypatch):
+    import text_as_data.codebook as cb
+    before = Codebook.from_yaml_string(SHORTHAND_YAML).variables[0].spec_hash
+    monkeypatch.setattr(cb, "PROMPT_TEMPLATE_VERSION", PROMPT_TEMPLATE_VERSION + 1)
+    after = Codebook.from_yaml_string(SHORTHAND_YAML).variables[0].spec_hash
+    assert before != after
+
+
+def test_normalized_spec_hash_equal_for_shorthand_and_its_explicit_form():
+    spec = spec_from_yaml_string(SHORTHAND_YAML)
+    explicit = normalize_spec(spec)
+    assert normalized_spec_hash(spec) == normalized_spec_hash(explicit)
+
+
+def test_spec_to_yaml_string_round_trips_the_variables_form():
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    text = spec_to_yaml_string(spec)
+    again = spec_from_yaml_string(text)
+    assert again == spec
+    Codebook.from_yaml_string(text)  # loads

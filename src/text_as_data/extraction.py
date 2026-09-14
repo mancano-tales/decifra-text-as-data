@@ -135,6 +135,19 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
         try:
             codebook_record = session.get(CodebookRecord, run.codebook_id)
             codebook = Codebook.from_yaml_string(codebook_record.yaml_raw)
+            if len(codebook.variables) > 1:
+                # R1.1 step 2 interim guard: the per-variable loop lands in
+                # step 3. Until then a multi-variable codebook must fail
+                # loudly here (marking the run "error" via the except below)
+                # rather than run its first variable as if it were the whole
+                # codebook -- or, as actually happens without this check,
+                # have every document's build_messages() ValueError swallowed
+                # into an "__error__" row by the per-document handler.
+                raise NotImplementedError(
+                    f"multi-variable codebooks ({[v.name for v in codebook.variables]}) are not yet supported by "
+                    "run_extraction; see docs/superpowers/specs/"
+                    "2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md §10 step 3"
+                )
             codebook_yaml_hash = hashlib.sha256(codebook_record.yaml_raw.encode("utf-8")).hexdigest()
             run.codebook_yaml_hash = codebook_yaml_hash
             session.add(run)
