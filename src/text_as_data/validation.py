@@ -299,3 +299,33 @@ def _set_disagreements(merged: pd.DataFrame, labels: list[str], *, id_col: str, 
         )
     rows.sort(key=lambda r: (-(len(r["only_predicted"]) + len(r["only_gold"])), r[id_col]))
     return rows
+
+
+def multilabel_reproducibility_report(
+    run_a: pd.DataFrame,
+    run_b: pd.DataFrame,
+    labels: list[str],
+    *,
+    id_col: str = "document_id",
+    set_col: str = "labels",
+) -> dict:
+    """Two runs of the same codebook+model+corpus compared against each
+    other (spec §8.4): a thin relabeling of `multilabel_agreement_report`
+    with run B in the gold position, since the statistics for "does A match
+    B" do not care which side is the truth. Direction-laden keys are
+    renamed; the per-label quote details are dropped (neither run is the
+    reviewer's reference)."""
+    report = multilabel_agreement_report(run_a, run_b, labels, id_col=id_col, set_col=set_col)
+    for stats in report["per_label"].values():
+        stats["run_a_count"] = stats.pop("predicted_count")
+        stats["run_b_count"] = stats.pop("gold_count")
+    s = report["set_agreement"]
+    s["mean_run_a_set_size"] = s.pop("mean_predicted_set_size")
+    s["mean_run_b_set_size"] = s.pop("mean_gold_set_size")
+    for row in report["disagreements"]:
+        row["run_a"] = row.pop("predicted")
+        row["run_b"] = row.pop("gold")
+        row["only_run_a"] = row.pop("only_predicted")
+        row["only_run_b"] = row.pop("only_gold")
+        row.pop("only_predicted_details", None)
+    return report

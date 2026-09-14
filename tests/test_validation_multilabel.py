@@ -12,6 +12,7 @@ import pytest
 from text_as_data.validation import (
     indicator_frame,
     multilabel_agreement_report,
+    multilabel_reproducibility_report,
 )
 
 LABELS = ["a", "b", "c"]
@@ -167,3 +168,17 @@ def test_predicted_ids_missing_from_gold_are_simply_not_scored():
     extra = pd.concat([PREDICTED, pd.DataFrame({"id": [99], "labels": [{"a"}]})])
     report = multilabel_agreement_report(extra, GOLD, LABELS, id_col="id", set_col="labels")
     assert sum(report["set_agreement"]["documents"].values()) == 6
+
+
+def test_reproducibility_relabels_predicted_gold_as_run_a_run_b():
+    report = multilabel_reproducibility_report(PREDICTED, GOLD, LABELS, id_col="id", set_col="labels")
+    assert report["kind"] == "multi_label"
+    assert "exact_match_ratio" in report["set_agreement"] and "mean_jaccard" in report["set_agreement"]
+    # Self-agreement has no "gold"; the two runs are symmetric in name.
+    assert report["set_agreement"]["mean_run_a_set_size"] == pytest.approx(7 / 6)
+    assert report["set_agreement"]["mean_run_b_set_size"] == pytest.approx(7 / 6)
+    assert "mean_predicted_set_size" not in report["set_agreement"]
+    row = report["disagreements"][0]
+    assert set(row) >= {"run_a", "run_b", "only_run_a", "only_run_b"}
+    assert "predicted" not in row and "gold" not in row and "only_predicted_details" not in row
+    assert report["per_label"]["a"]["run_a_count"] == 3 and report["per_label"]["a"]["run_b_count"] == 4
