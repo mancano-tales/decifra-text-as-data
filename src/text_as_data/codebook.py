@@ -294,20 +294,194 @@ def spec_to_yaml_string(spec: dict) -> str:
     return yaml.safe_dump(spec, allow_unicode=True, sort_keys=False)
 
 
+_MULTI_LABEL_PARAGRAPH = (
+    "Select every category whose definition is met, and only those. Do not add "
+    "a category because the document is loosely related to it; a category "
+    "applies only when its definition is satisfied. "
+)
+_PER_LABEL_QUOTE_SENTENCE = "Quote the specific passage that grounds each selected category. "
+_PER_SET_QUOTE_SENTENCE = "Quote the single passage that best grounds the set as a whole. "
+_EMPTY_SET_SENTENCE = (
+    "If no category applies, return an empty list and explain why in the overall rationale."
+)
+
+
+def _pascal(name: str) -> str:
+    return "".join(part.capitalize() for part in name.split("_") if part)
+
+
+def _build_single_label_schema(model_name: str, labels: list[str]) -> type[BaseModel]:
+    # Fixed contract: `category`/`rationale`/`evidence_span` are relied on
+    # by exact field name elsewhere (db.py's ExtractionRecord,
+    # run_extraction, the results/gold/validation endpoints, the frontend)
+    # -- renaming here breaks those call sites silently via AttributeError,
+    # not at this layer. Renamed from the original Portuguese identifiers
+    # on 2026-09-13 (R1.1 step 1); db.py migrates existing databases.
+    return create_model(
+        model_name,
+        category=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
+        rationale=(str, Field(description="Free-text rationale for the chosen category.")),
+        evidence_span=(str, Field(description="Verbatim quote from the document that grounds the decision.")),
+    )
+
+
+def _build_multi_label_schema(
+    model_name: str, labels: list[str], *, min_labels: int, max_labels: int | None, evidence_granularity: str
+) -> type[BaseModel]:
+    list_kwargs = {"min_length": min_labels}
+    if max_labels is not None:
+        list_kwargs["max_length"] = max_labels
+    if evidence_granularity == "per_set":
+        return create_model(
+            model_name,
+            labels=(
+                list[Literal[tuple(labels)]],
+                Field(**list_kwargs, description="Every category whose definition is met, and only those. Empty if none applies."),
+            ),
+            rationale=(str, Field(description="Overall reasoning for the set as a whole, including near-miss categories considered and why they were not selected.")),
+            evidence_span=(str, Field(description="Verbatim quote from the document that best grounds the set as a whole.")),
+        )
+    selection = create_model(
+        f"{model_name.removesuffix('Extraction')}Selection",
+        label=(Literal[tuple(labels)], Field(description="One selected category label.")),
+        rationale=(str, Field(description="Why this label applies to this document.")),
+        evidence_span=(str, Field(description="Verbatim quote from the document that grounds THIS label.")),
+    )
+    return create_model(
+        model_name,
+        selections=(
+            list[selection],
+            Field(**list_kwargs, description="Every category whose definition is met, and only those. Empty if none applies."),
+        ),
+        rationale=(str, Field(description="Overall reasoning for the set as a whole, including near-miss categories considered and why they were not selected.")),
+    )
+
+
+def _build_instructions(concept: str, description: str, variable: dict) -> str:
+    """The instructions block for one variable. For the shorthand `main`
+    variable this is byte-identical to the pre-R1.1 text (no "Variable:"
+    block), which keeps prompts -- and therefore the extraction cache --
+    stable for every existing single-variable codebook."""
+    lines = [f"Concept: {concept}", description.strip(), ""]
+    if variable["name"] != SHORTHAND_VARIABLE_NAME:
+        lines += [f"Variable: {variable['name']}", variable["description"].strip(), ""]
+    lines.append("Categories:")
+    for c in variable["categories"]:
+        lines.append(f"- {c['label']}: {c['definition'].strip()}")
+        for ex in c["positive_examples"]:
+            lines.append(f'  Positive example: "{ex}"')
+        for ex in c["negative_examples"]:
+            lines.append(f'  Negative example: "{ex}"')
+        if c["boundary_notes"]:
+            lines.append(f"  Boundary notes: {c['boundary_notes'].strip()}")
+    if variable["multi_label"]:
+        quote = _PER_SET_QUOTE_SENTENCE if variable["evidence_granularity"] == "per_set" else _PER_LABEL_QUOTE_SENTENCE
+        paragraph = _MULTI_LABEL_PARAGRAPH + quote + _EMPTY_SET_SENTENCE
+        if variable["min_labels"] > 0:
+            n = variable["min_labels"]
+            paragraph += f" Select at least {n} {'category' if n == 1 else 'categories'}."
+        if variable["max_labels"] is not None:
+            n = variable["max_labels"]
+            paragraph += f" Select at most {n} {'category' if n == 1 else 'categories'}."
+        lines += ["", paragraph]
+    return "\n".join(lines)
+
+
+def variable_spec_hash(concept: str, description: str, variable: dict) -> str:
+    """sha256 over the *normalized* variable spec plus the codebook-level
+    preamble and PROMPT_TEMPLATE_VERSION -- everything that shapes this
+    variable's prompt and schema, and nothing else. Reformatting the YAML,
+    or editing another variable, does not change it (spec §4.3)."""
+    payload = {
+        "template": PROMPT_TEMPLATE_VERSION,
+        "concept": concept,
+        "description": description,
+        "variable": variable,
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+
+
+def normalized_spec_hash(spec: dict) -> str:
+    """sha256 over the whole normalized spec -- the joint-mode cache key and
+    the reproducibility check's notion of "same codebook" (spec §4.3)."""
+    return hashlib.sha256(
+        json.dumps(normalize_spec(spec), sort_keys=True, ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+
+
 @dataclass
-class Codebook:
-    """A theoretical construct operationalized as an LLM-extractable schema.
+class CodebookVariable:
+    """One question the codebook asks of every document, with its own
+    output schema, instructions block and cache-key hash."""
 
-    A codebook bundles three things that must travel together: the output
-    schema (what columns end up in the structured table), the instructions
-    (the theoretical definition of each category — the part a domain expert
-    actually authors), and a handful of worked examples (few-shot) that pin
-    down edge cases the instructions alone tend to leave ambiguous.
-    """
-
+    name: str
+    description: str
+    categories: list[dict]
+    multi_label: bool
+    min_labels: int
+    max_labels: int | None
+    evidence_granularity: str
     schema: type[BaseModel]
     instructions: str
+    spec_hash: str
+
+    @property
+    def labels(self) -> list[str]:
+        return [c["label"] for c in self.categories]
+
+    @classmethod
+    def from_normalized(cls, concept: str, description: str, variable: dict) -> "CodebookVariable":
+        labels = [c["label"] for c in variable["categories"]]
+        model_name = (
+            "CodebookExtraction" if variable["name"] == SHORTHAND_VARIABLE_NAME else f"{_pascal(variable['name'])}Extraction"
+        )
+        if variable["multi_label"]:
+            schema = _build_multi_label_schema(
+                model_name, labels,
+                min_labels=variable["min_labels"], max_labels=variable["max_labels"],
+                evidence_granularity=variable["evidence_granularity"],
+            )
+        else:
+            schema = _build_single_label_schema(model_name, labels)
+        return cls(
+            name=variable["name"],
+            description=variable["description"],
+            categories=variable["categories"],
+            multi_label=variable["multi_label"],
+            min_labels=variable["min_labels"],
+            max_labels=variable["max_labels"],
+            evidence_granularity=variable["evidence_granularity"],
+            schema=schema,
+            instructions=_build_instructions(concept, description, variable),
+            spec_hash=variable_spec_hash(concept, description, variable),
+        )
+
+
+@dataclass
+class Codebook:
+    """A theoretical construct operationalized as one or more LLM-extractable
+    schemas.
+
+    A codebook bundles what must travel together: for each *variable*, the
+    output schema (what columns end up in the structured table) and the
+    instructions (the theoretical definition of each category -- the part a
+    domain expert actually authors); plus optional worked examples
+    (few-shot) that pin down edge cases.
+
+    `schema`/`instructions` at the top level are the single-variable
+    convenience: populated when the codebook has exactly one variable
+    (every codebook before R1.1, and the `Codebook(schema=..., instructions=...)`
+    constructor used by tests/examples), `None`/`""` otherwise -- callers
+    handling multi-variable codebooks go through `variables`.
+    """
+
+    schema: type[BaseModel] | None = None
+    instructions: str = ""
     examples: list[dict] = field(default_factory=list)
+    concept: str = ""
+    description: str = ""
+    prompt_strategy: str = "per_variable"
+    variables: list[CodebookVariable] = field(default_factory=list)
 
     _PERSONA = (
         "You are a careful annotator applying a fixed coding scheme. "
@@ -316,7 +490,27 @@ class Codebook:
         "substitute your own default definition for the one given.\n\n"
     )
 
-    def build_messages(self, text: str, include_persona: bool = True) -> list[dict]:
+    def variable(self, name: str) -> CodebookVariable:
+        for v in self.variables:
+            if v.name == name:
+                return v
+        raise KeyError(f"codebook has no variable {name!r}; variables: {[v.name for v in self.variables]}")
+
+    def _resolve_variable_instructions(self, variable) -> str:
+        if variable is None:
+            if len(self.variables) > 1:
+                raise ValueError(
+                    f"codebook has {len(self.variables)} variables; pass variable= to build_messages "
+                    f"(one of {[v.name for v in self.variables]})"
+                )
+            return self.instructions
+        if isinstance(variable, str):
+            variable = self.variable(variable)
+        return variable.instructions
+
+    def build_messages(
+        self, text: str, variable: "str | CodebookVariable | None" = None, include_persona: bool = True
+    ) -> list[dict]:
         # `include_persona` exists to let an ablation test isolate the fixed
         # persona line's own effect from the codebook's actual instructions
         # -- see docs/research/2026-09-02_llm_pipeline_verification_methodology.md's
@@ -324,7 +518,10 @@ class Codebook:
         # this line (present since the project's very first commit, before
         # any specific codebook existed) had never been measured with vs.
         # without. Defaults to the existing behavior (persona included).
-        system = f"{self._PERSONA}{self.instructions}" if include_persona else self.instructions
+        # `variable` selects which variable's instructions to send; omitted
+        # = the single variable.
+        instructions = self._resolve_variable_instructions(variable)
+        system = f"{self._PERSONA}{instructions}" if include_persona else instructions
         messages = [{"role": "system", "content": system}]
         for example in self.examples:
             messages.append({"role": "user", "content": example["text"]})
@@ -349,34 +546,16 @@ class Codebook:
     @classmethod
     def _from_spec(cls, spec: dict) -> "Codebook":
         validate_spec(spec)
-
-        # Fixed contract: `category`/`rationale`/`evidence_span` are relied
-        # on by exact field name elsewhere (db.py's ExtractionRecord,
-        # run_extraction, the results/gold/validation endpoints, the
-        # frontend) -- renaming here breaks those call sites silently via
-        # AttributeError, not at this layer. Renamed from the original
-        # Portuguese identifiers on 2026-09-13 (R1.1 step 1); db.py migrates
-        # existing databases in place.
-        labels = [c["label"] for c in spec["categories"]]
-        schema = create_model(
-            "CodebookExtraction",
-            category=(Literal[tuple(labels)], Field(description="One of the codebook's category labels.")),
-            rationale=(str, Field(description="Free-text rationale for the chosen category.")),
-            evidence_span=(
-                str,
-                Field(description="Verbatim quote from the document that grounds the decision."),
-            ),
+        norm = normalize_spec(spec)
+        variables = [
+            CodebookVariable.from_normalized(norm["concept"], norm["description"], v) for v in norm["variables"]
+        ]
+        single = variables[0] if len(variables) == 1 else None
+        return cls(
+            schema=single.schema if single else None,
+            instructions=single.instructions if single else "",
+            concept=norm["concept"],
+            description=norm["description"],
+            prompt_strategy=norm["prompt_strategy"],
+            variables=variables,
         )
-
-        lines = [f"Concept: {spec['concept']}", spec["description"].strip(), "", "Categories:"]
-        for c in spec["categories"]:
-            lines.append(f"- {c['label']}: {c['definition'].strip()}")
-            for ex in c.get("positive_examples", []):
-                lines.append(f'  Positive example: "{ex}"')
-            for ex in c.get("negative_examples", []):
-                lines.append(f'  Negative example: "{ex}"')
-            if c.get("boundary_notes"):
-                lines.append(f"  Boundary notes: {c['boundary_notes'].strip()}")
-        instructions = "\n".join(lines)
-
-        return cls(schema=schema, instructions=instructions)

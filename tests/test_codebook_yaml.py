@@ -228,7 +228,10 @@ from text_as_data.codebook import (  # noqa: E402  (grouped with the tests that 
     GOLD_EMPTY_SET_TOKEN,
     GOLD_SET_DELIMITER,
     PROMPT_TEMPLATE_VERSION,
+    CodebookVariable,
     normalize_spec,
+    normalized_spec_hash,
+    variable_spec_hash,
 )
 
 SHORTHAND_YAML = """
@@ -460,3 +463,99 @@ def test_validate_spec_still_reports_shorthand_errors_the_old_way():
     with pytest.raises(ValueError, match="duplicate category label"):
         validate_spec({"concept": "c", "description": "d",
                        "categories": [{"label": "a", "definition": "x"}, {"label": "a", "definition": "y"}]})
+
+
+def test_shorthand_codebook_is_byte_identical_to_the_pre_variables_behaviour():
+    book = Codebook.from_yaml_string(SHORTHAND_YAML)
+    assert len(book.variables) == 1
+    v = book.variables[0]
+    assert v.name == "main" and v.multi_label is False
+    # Same schema title and field names as before step 2 -- the JSON schema
+    # is embedded in the CLI prompt, so the title is part of the wire format.
+    assert book.schema is v.schema
+    assert book.schema.__name__ == "CodebookExtraction"
+    assert list(book.schema.model_fields) == ["category", "rationale", "evidence_span"]
+    # Same instructions text: no "Variable:" block for the shorthand.
+    assert book.instructions == v.instructions
+    assert book.instructions.startswith("Concept: protest\nA collective public event with a claim.\n\nCategories:\n")
+    assert "Variable:" not in book.instructions
+
+
+def test_two_variable_codebook_builds_one_schema_and_instructions_per_variable():
+    book = Codebook.from_yaml_string(TWO_VARIABLE_YAML)
+    assert [v.name for v in book.variables] == ["event_type", "sdg_goals"]
+    assert book.prompt_strategy == "per_variable"
+    # No single top-level schema/instructions for a multi-variable codebook.
+    assert book.schema is None and book.instructions == ""
+
+    event_type = book.variable("event_type")
+    assert event_type.schema.__name__ == "EventTypeExtraction"
+    assert list(event_type.schema.model_fields) == ["category", "rationale", "evidence_span"]
+    assert event_type.labels == ["protest", "violence", "other"]
+    assert "Variable: event_type\nThe main event the article reports. Exactly one applies." in event_type.instructions
+    assert "Concept: land_conflict_coverage" in event_type.instructions
+    assert "- protest: An occupation, march or blockade with a demand." in event_type.instructions
+    assert "sdg_5" not in event_type.instructions  # other variables' categories are not leaked in
+
+    with pytest.raises(KeyError):
+        book.variable("nope")
+
+
+def test_multi_label_per_label_schema_has_selections_with_per_label_evidence():
+    book = Codebook.from_yaml_string(TWO_VARIABLE_YAML)
+    sdg = book.variable("sdg_goals")
+    assert sdg.multi_label is True and sdg.evidence_granularity == "per_label"
+    fields = sdg.schema.model_fields
+    assert list(fields) == ["selections", "rationale"]
+    selection_model = fields["selections"].annotation.__args__[0]
+    assert list(selection_model.model_fields) == ["label", "rationale", "evidence_span"]
+    # min/max bounds are enforced by the schema itself, not only the prompt.
+    schema_json = sdg.schema.model_json_schema()
+    assert schema_json["properties"]["selections"]["maxItems"] == 2
+    assert schema_json["properties"]["selections"]["minItems"] == 0
+    # Enum of labels lives on the selection's `label`.
+    parsed = sdg.schema.model_validate(
+        {"selections": [{"label": "sdg_5", "rationale": "r", "evidence_span": "q"}], "rationale": "overall"}
+    )
+    assert parsed.selections[0].label == "sdg_5"
+    with pytest.raises(Exception):
+        sdg.schema.model_validate({"selections": [{"label": "not_a_label", "rationale": "r", "evidence_span": "q"}], "rationale": "x"})
+    with pytest.raises(Exception):  # 3 > max_labels=2
+        sdg.schema.model_validate({"selections": [
+            {"label": "sdg_5", "rationale": "", "evidence_span": ""},
+            {"label": "sdg_15", "rationale": "", "evidence_span": ""},
+            {"label": "sdg_16", "rationale": "", "evidence_span": ""}], "rationale": "x"})
+
+
+def test_multi_label_per_set_schema_has_a_labels_list_and_one_evidence_span():
+    spec = _two_var_spec(evidence_granularity="per_set", max_labels=None)
+    del spec["variables"][1]["max_labels"]
+    book = Codebook._from_spec(spec)
+    sdg = book.variable("sdg_goals")
+    fields = sdg.schema.model_fields
+    assert list(fields) == ["labels", "rationale", "evidence_span"]
+    schema_json = sdg.schema.model_json_schema()
+    assert "maxItems" not in schema_json["properties"]["labels"]
+    parsed = sdg.schema.model_validate({"labels": ["sdg_5", "sdg_16"], "rationale": "r", "evidence_span": "q"})
+    assert parsed.labels == ["sdg_5", "sdg_16"]
+
+
+def test_multi_label_instructions_carry_the_parsimony_paragraph_and_bounds():
+    book = Codebook.from_yaml_string(TWO_VARIABLE_YAML)
+    text = book.variable("sdg_goals").instructions
+    assert "Select every category whose definition is met, and only those." in text
+    assert "If no category applies, return an empty list" in text
+    assert "Select at most 2 categories." in text
+    assert "Select at least" not in text  # min_labels is 0
+    spec = _two_var_spec(min_labels=1, max_labels=2)
+    text = Codebook._from_spec(spec).variable("sdg_goals").instructions
+    assert "Select at least 1 category." in text and "Select at most 2 categories." in text
+    # Single-label variables do not get the paragraph.
+    assert "Select every category" not in book.variable("event_type").instructions
+
+
+def test_per_set_instructions_ask_for_one_quote_for_the_set():
+    spec = _two_var_spec(evidence_granularity="per_set")
+    text = Codebook._from_spec(spec).variable("sdg_goals").instructions
+    assert "Quote the single passage that best grounds the set as a whole." in text
+    assert "Quote the specific passage that grounds each selected category." not in text
