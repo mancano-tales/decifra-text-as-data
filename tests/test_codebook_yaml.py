@@ -312,3 +312,151 @@ def test_normalize_spec_does_not_mutate_its_input():
 def test_normalize_spec_is_idempotent():
     norm = normalize_spec(spec_from_yaml_string(TWO_VARIABLE_YAML))
     assert normalize_spec(norm) == norm
+
+
+def _two_var_spec(**variable_overrides):
+    """TWO_VARIABLE_YAML as a dict with overrides applied to the sdg_goals variable."""
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["variables"][1].update(variable_overrides)
+    return spec
+
+
+def test_validate_spec_accepts_the_two_variable_form():
+    validate_spec(spec_from_yaml_string(TWO_VARIABLE_YAML))
+
+
+def test_validate_spec_rejects_both_categories_and_variables_at_top_level():
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["categories"] = [{"label": "x", "definition": "y"}]
+    with pytest.raises(ValueError, match="exactly one of 'categories' or 'variables'"):
+        validate_spec(spec)
+
+
+def test_validate_spec_rejects_neither_categories_nor_variables():
+    with pytest.raises(ValueError, match="exactly one of 'categories' or 'variables'"):
+        validate_spec({"concept": "c", "description": "d"})
+
+
+@pytest.mark.parametrize("bad_name", ["1abc", "has space", "has-dash", "has.dot", ""])
+def test_validate_spec_rejects_invalid_variable_names(bad_name):
+    with pytest.raises(ValueError, match="variable name"):
+        validate_spec(_two_var_spec(name=bad_name))
+
+
+@pytest.mark.parametrize("reserved", ["main", "category", "document_id", "rationale", "variable"])
+def test_validate_spec_rejects_reserved_variable_names(reserved):
+    with pytest.raises(ValueError, match="reserved"):
+        validate_spec(_two_var_spec(name=reserved))
+
+
+def test_validate_spec_rejects_duplicate_variable_names():
+    with pytest.raises(ValueError, match="duplicate variable name"):
+        validate_spec(_two_var_spec(name="event_type"))
+
+
+def test_validate_spec_rejects_colliding_derived_export_columns():
+    # `x` and `x_rationale` cannot coexist: x's rationale column would be
+    # named exactly like the second variable's own label column.
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["variables"][0]["name"] = "x"
+    spec["variables"][1]["name"] = "x_rationale"
+    with pytest.raises(ValueError, match="export column"):
+        validate_spec(spec)
+
+
+def test_validate_spec_requires_a_variable_description():
+    with pytest.raises(ValueError, match="description"):
+        validate_spec(_two_var_spec(description=""))
+
+
+def test_validate_spec_rejects_non_boolean_multi_label():
+    with pytest.raises(ValueError, match="multi_label"):
+        validate_spec(_two_var_spec(multi_label="yes"))
+
+
+def test_validate_spec_rejects_min_max_labels_on_a_single_label_variable():
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["variables"][0]["max_labels"] = 1
+    with pytest.raises(ValueError, match="only allowed when multi_label"):
+        validate_spec(spec)
+
+
+def test_validate_spec_rejects_evidence_granularity_on_a_single_label_variable():
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["variables"][0]["evidence_granularity"] = "per_set"
+    with pytest.raises(ValueError, match="only allowed when multi_label"):
+        validate_spec(spec)
+
+
+@pytest.mark.parametrize("granularity", ["per_label", "per_set"])
+def test_validate_spec_accepts_both_evidence_granularities(granularity):
+    validate_spec(_two_var_spec(evidence_granularity=granularity))
+
+
+def test_validate_spec_rejects_unknown_evidence_granularity():
+    with pytest.raises(ValueError, match="evidence_granularity"):
+        validate_spec(_two_var_spec(evidence_granularity="per_document"))
+
+
+@pytest.mark.parametrize(
+    "overrides, message",
+    [
+        ({"min_labels": -1}, "non-negative integer"),
+        ({"max_labels": 0.5}, "non-negative integer"),
+        ({"min_labels": 3, "max_labels": 2}, "min_labels"),
+        ({"max_labels": 4}, "max_labels"),  # only 3 categories
+    ],
+)
+def test_validate_spec_rejects_inconsistent_label_bounds(overrides, message):
+    with pytest.raises(ValueError, match=message):
+        validate_spec(_two_var_spec(**overrides))
+
+
+def test_validate_spec_rejects_multi_label_labels_that_break_the_gold_csv():
+    spec = _two_var_spec()
+    spec["variables"][1]["categories"][0]["label"] = f"sdg{GOLD_SET_DELIMITER}5"
+    with pytest.raises(ValueError, match=re.escape(GOLD_SET_DELIMITER)):
+        validate_spec(spec)
+    spec = _two_var_spec()
+    spec["variables"][1]["categories"][0]["label"] = GOLD_EMPTY_SET_TOKEN
+    with pytest.raises(ValueError, match=re.escape(GOLD_EMPTY_SET_TOKEN)):
+        validate_spec(spec)
+    spec = _two_var_spec()
+    spec["variables"][1]["categories"][0]["label"] = " sdg_5"
+    with pytest.raises(ValueError, match="whitespace"):
+        validate_spec(spec)
+
+
+def test_validate_spec_allows_a_pipe_in_a_single_label_label():
+    # Single-label variables never round-trip through a delimited cell.
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["variables"][0]["categories"][0]["label"] = "a|b"
+    validate_spec(spec)
+
+
+def test_validate_spec_rejects_unknown_prompt_strategy():
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML)
+    spec["prompt_strategy"] = "sequential"
+    with pytest.raises(ValueError, match="prompt_strategy"):
+        validate_spec(spec)
+
+
+@pytest.mark.parametrize("literal, expected", [("true", True), ("True", True), ("yes", True), ("false", False), ("off", False)])
+def test_spec_from_yaml_string_restores_a_real_boolean_on_multi_label(literal, expected):
+    # The bool-safe loader (which keeps `yes`/`no` *labels* as strings)
+    # would otherwise hand validate_spec the string "true" for
+    # `multi_label: true`; the YAML boundary re-applies PyYAML's own bool
+    # table to that one key so authors get standard YAML behaviour.
+    spec = spec_from_yaml_string(TWO_VARIABLE_YAML.replace("multi_label: true", f"multi_label: {literal}"))
+    assert spec["variables"][1]["multi_label"] is expected
+    assert spec["variables"][0].get("multi_label") is None  # untouched when absent
+    # Labels are still not coerced.
+    labels_spec = spec_from_yaml_string(SHORTHAND_YAML.replace("label: protest", "label: yes"))
+    assert labels_spec["categories"][0]["label"] == "yes"
+
+
+def test_validate_spec_still_reports_shorthand_errors_the_old_way():
+    # Regression guard for the existing single-variable messages.
+    with pytest.raises(ValueError, match="duplicate category label"):
+        validate_spec({"concept": "c", "description": "d",
+                       "categories": [{"label": "a", "definition": "x"}, {"label": "a", "definition": "y"}]})
