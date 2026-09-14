@@ -2,6 +2,19 @@
 
 ## Pending
 
+- 2026-09-13 — **Frontend has no automated tests.** The R1.1 step 1 rename
+  of `ResultsTable.tsx`/`api.ts` was verified only by `tsc` (via `npm run
+  build`) and lint — strong for *references*, blind to *behaviour* (the
+  category filter, the row edit round-trip, the error banner). This is a
+  pre-existing gap, not a step-1 regression, but §10 step 7 of the R1.1
+  spec rewrites `ResultsTable.tsx`, `ValidationPanel.tsx` and
+  `CodebookEditor.tsx` for multi-variable/multi-label, and shipping that
+  with zero component tests is the point where the gap starts costing.
+  Before step 7: add Vitest + React Testing Library, and cover at least the
+  results filter, the edit round-trip against a mocked `api.ts`, and the
+  validation panel's `kind` branch. Keep it small — the backend suite is
+  where correctness lives; these are guardrails for the JSX.
+
 - 2026-09-09 — **Feature: multi-label codebooks.** `codebook.py`'s
   `_from_spec` builds `categoria=(Literal[tuple(labels)], ...)` — exactly
   one category per document. That makes a whole class of real coding
