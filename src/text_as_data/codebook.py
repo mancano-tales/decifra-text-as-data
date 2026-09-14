@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import copy
+import hashlib
+import json
+import re
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -22,6 +26,89 @@ _CodebookYamlLoader.yaml_implicit_resolvers = {
     key: [resolver for resolver in resolvers if resolver[0] != "tag:yaml.org,2002:bool"]
     for key, resolvers in _CodebookYamlLoader.yaml_implicit_resolvers.items()
 }
+
+
+# Bumped whenever the fixed instruction text below changes (persona, the
+# multi-label parsimony paragraph, list formatting). Part of every
+# variable_spec_hash, so a wording change invalidates the extraction cache
+# instead of silently serving answers produced by a different prompt.
+PROMPT_TEMPLATE_VERSION = 1
+
+# Gold-label CSV conventions for multi-label variables (spec §7.2). Labels
+# of a multi-label variable may not contain the delimiter or equal the
+# empty-set token, checked in validate_spec so the CSV parser never faces
+# an ambiguous cell.
+GOLD_SET_DELIMITER = "|"
+GOLD_EMPTY_SET_TOKEN = "[]"
+
+# The shorthand's implicit variable name, and every name a variable may not
+# take because it would collide with a results/export column (spec §2.3).
+SHORTHAND_VARIABLE_NAME = "main"
+RESERVED_VARIABLE_NAMES = frozenset(
+    {
+        SHORTHAND_VARIABLE_NAME,
+        "id", "run_id", "document_id", "document_snippet",
+        "category", "categories", "rationale", "evidence_span",
+        "variable", "tokens_used", "prompt_sent", "raw_response",
+    }
+)
+_VARIABLE_NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+_PROMPT_STRATEGIES = ("per_variable", "joint")
+_EVIDENCE_GRANULARITIES = ("per_label", "per_set")
+# Suffixes appended to a variable name to form its export columns. Used by
+# validate_spec's distinctness check; step 5 (app.py export) must use the
+# same list.
+EXPORT_COLUMN_SUFFIXES = ("", "_rationale", "_evidence_span", "_selections", "_evidence_verified")
+
+
+def _normalize_category(category: dict) -> dict:
+    return {
+        "label": category["label"],
+        "definition": category["definition"],
+        "positive_examples": list(category.get("positive_examples") or []),
+        "negative_examples": list(category.get("negative_examples") or []),
+        "boundary_notes": category.get("boundary_notes") or "",
+    }
+
+
+def normalize_spec(spec: dict) -> dict:
+    """Return a new spec dict in the explicit `variables:` form with every
+    default filled in. The single-variable shorthand (top-level
+    `categories:`) becomes one variable named `main` whose description is
+    the codebook's. Does not validate -- call `validate_spec` first (it
+    accepts both forms). Pure: the input is not mutated, and normalizing
+    an already-normalized spec returns an equal dict, which is what makes
+    the spec hashes below stable across YAML reformatting."""
+    spec = copy.deepcopy(spec)
+    if "variables" in spec:
+        raw_variables = spec["variables"]
+    else:
+        raw_variables = [
+            {
+                "name": SHORTHAND_VARIABLE_NAME,
+                "description": spec.get("description", ""),
+                "categories": spec.get("categories", []),
+            }
+        ]
+    variables = []
+    for raw in raw_variables:
+        variables.append(
+            {
+                "name": raw["name"],
+                "description": raw["description"],
+                "multi_label": bool(raw.get("multi_label", False)),
+                "min_labels": raw.get("min_labels", 0) if raw.get("min_labels") is not None else 0,
+                "max_labels": raw.get("max_labels"),
+                "evidence_granularity": raw.get("evidence_granularity", "per_label"),
+                "categories": [_normalize_category(c) for c in raw.get("categories", [])],
+            }
+        )
+    return {
+        "concept": spec.get("concept"),
+        "description": spec.get("description"),
+        "prompt_strategy": spec.get("prompt_strategy", "per_variable"),
+        "variables": variables,
+    }
 
 
 def validate_spec(spec: dict) -> None:
