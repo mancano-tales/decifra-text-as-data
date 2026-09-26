@@ -1,5 +1,10 @@
 # Decifra: verified MVP status
 
+## Update: R1.1 multi-variable and multi-label codebooks in progress (2026-09-26)
+
+This file's 2026-09-07 sections below are historical on one point: multi-variable codebooks are **no longer "design only"**. The author signed off the YAML shape and the six reserved decisions on 2026-09-13 ([spec](superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md) §15). On `main`: step 1 (neutral output field names, `078eadd`), step 2 (codebook contract with `variables:`, `multi_label`, `min_labels`/`max_labels`, `evidence_granularity`, per-variable schema and cache hash, `4610368`) and step 4 (`multilabel_agreement_report()` and multi-label reproducibility, `7c49b7f`). Not yet: step 3 (extraction, estimates and storage consume `Codebook.variables`; until then a run with a multi-variable codebook is refused with a clear error) and the later API/UI steps. The MVP as a user runs it is therefore still single-variable. Current state lives in [`ROADMAP.md`](ROADMAP.md) R1.1; first external use case: [#4](https://github.com/mancano-tales/decifra-text-as-data/issues/4) (`bbsia-radar`).
+
+
 ## Update: functional MVP handoff (2026-09-07)
 
 The follow-up implementation closes document import in the UI and adds approximate pre-run token/cache estimates, optional user-entered monetary rates, persisted provider defaults, OS-keyring credential entry, and `decifra serve` with one local frontend/API origin. It also surfaces evidence and errors, preserves the original pre-review answer, excludes reviewed rows from cache, scopes validation coverage to the corpus, and records SDK-reported tokens when available.

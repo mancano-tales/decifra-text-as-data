@@ -1,5 +1,16 @@
 # NEWS
 
+## 2026-09-26 — Docs aligned with the actual state of R1.1
+
+`README.md`, `README.pt-BR.md` and `docs/MVP_STATUS.md` still called multi-variable codebooks "design only". That led a session in another repository (`bbsia-radar`, its issue #6) to conclude, wrongly, that Decifra could only classify one variable per codebook. Actual state: the YAML shape was signed off by the author on 2026-09-13, the codebook contract and multi-label validation are on `main` (R1.1 steps 1, 2 and 4), and step 3 (wiring extraction, estimates and storage) is still missing. Both READMEs and `MVP_STATUS.md` now say so; the MVP as a user runs it is still single-variable, because a multi-variable run is still refused. `ROADMAP.md` gained the 2026-09-13 sign-off line, which previously appeared only in §15 of the spec, and the spec's header, which still read "draft for author sign-off", now says it was signed off. First external use case that depends on R1.1: issue #4 (`bbsia-radar`).
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Issue**: #4
+- **Commits**: `734e913`, `1ca17bf` and the translation of this entry
+- **Files**: `README.md`, `README.pt-BR.md`, `docs/MVP_STATUS.md`, `docs/ROADMAP.md`, `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`, `NEWS.md`
+
 ## 2026-09-26 — Governança comum do ecossistema (v2026-09-26)
 
 Aplicado o bloco de governança comum mantido no hub (`mancano-tales/mancano-repo-hub`, `tools/governanca-comum/`): planos com issue (`tools/plano_issue.py`), aprovação só no chat e no plano, mensagens de agentes como pedido, cabeçalho de agente, branch/PR opcionais, `NEWS.md` junto com a mudança e **datas sem hora**. O bloco fica entre marcadores no `AGENTS.md`; o que é específico deste repositório foi preservado.

@@ -6,7 +6,7 @@
 
 It is not a manual qualitative-coding tool (see [Taguette](https://www.taguette.org/), [QualCoder](https://github.com/ccbogel/QualCoder), or [QualiLab](https://github.com/LuizPF42/QualiLab) for that). You define a codebook, point it at a corpus, and Decifra runs the LLM over every document and fills an output table automatically.
 
-**Status:** functional single-variable MVP for a supervised pilot. The UI has four tabs (Corpus, Codebook, Runs, Settings); results and validation live inside Runs. Document upload, approximate pre-run token estimates, saved provider settings, evidence inspection and a single local server are implemented. No packaged installer yet. See the [test guide](docs/MVP_TEST_GUIDE.md).
+**Status:** functional single-variable MVP for a supervised pilot; multi-variable and multi-label codebooks are in progress (roadmap R1.1, see below). The UI has four tabs (Corpus, Codebook, Runs, Settings); results and validation live inside Runs. Document upload, approximate pre-run token estimates, saved provider settings, evidence inspection and a single local server are implemented. No packaged installer yet. See the [test guide](docs/MVP_TEST_GUIDE.md).
 
 For researchers, organizational analysts, data journalists, and NGOs who need categorical data from text with explicit coding rules and inspectable results. The application and database run locally; text is sent to the selected provider when using a remote model.
 
@@ -34,7 +34,7 @@ LLM text classification risks **construct validity**: does the model actually ap
 - **Evidence and reproducibility**: source-quote verification is persisted in results/exports. `GET /runs/{id}/reproducibility?compare_to={id}` compares repeated runs; create the repeat with `bypass_cache: true`. The UI displays quotations and verification, exposes prompt/response details, and offers an ignore-cache checkbox. The run-comparison report remains API-only.
 - **Disclosure** (`text_as_data.disclosure`): a backend methods-report scaffold. Some text is stale, and it reads the current codebook/checkout; it is not a complete historical validation or reproducibility report.
 
-**Not built yet:** Multi-variable codebooks (design only). Cancel/resume and startup recovery of interrupted runs. Delete controls. Packaged installer. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Direct API integrations beyond Anthropic and OpenAI (Gemini has been exercised through an external CLI; no native Gemini or local/Ollama integration).
+**Not built yet:** Running multi-variable and multi-label codebooks end to end. The YAML shape was signed off by the author on 2026-09-13 ([spec](docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md) §15); the codebook contract (`variables:`, `multi_label`, `min_labels`/`max_labels`, `evidence_granularity`) and multi-label validation (`multilabel_agreement_report()`) are merged as library code, but a run with a multi-variable codebook is still refused until R1.1 step 3 wires extraction, estimates and storage (then API and UI). See [`docs/ROADMAP.md`](docs/ROADMAP.md) R1.1. Cancel/resume and startup recovery of interrupted runs. Delete controls. Packaged installer. Parallel document processing (currently one document at a time). Krippendorff's alpha or Gwet's AC1 (only Cohen's kappa today). Direct API integrations beyond Anthropic and OpenAI (Gemini has been exercised through an external CLI; no native Gemini or local/Ollama integration).
 
 ---
 
