@@ -1,6 +1,6 @@
 # AGENTS.md — text-as-data
 
-<!-- BEGIN governanca-comum v2026-09-26b (fonte: hub, tools/governanca-comum; não editar aqui) -->
+<!-- BEGIN governanca-comum v2026-09-26c (fonte: hub, tools/governanca-comum; não editar aqui) -->
 ## Governança comum do ecossistema
 
 > Bloco mantido no hub (`mancano-tales/mancano-repo-hub`, `tools/governanca-comum/`) e copiado para
@@ -37,9 +37,10 @@
 - **Caminhos relativos**, nunca absolutos de máquina (`C:/Users/...`), em código, configuração e
   documentação.
 - **Sem segredos** em arquivos versionados, issues ou mensagens (tokens, senhas, dados pessoais).
-- **Exportar conversas está descontinuado** (autor, 2026-09-26): não exporte sessões para `llm-reviews/`;
-  `tools/export_conversa.R`, onde existir, recusa rodar, e a skill `export-conversation` está desativada.
-  O registro de uma sessão é o `NEWS.md`, o plano, a issue e o `git log`; exports antigos ficam como histórico.
+- **Exportar conversa só quando o autor pedir** (autor, 2026-09-26): nunca por iniciativa própria
+  nem como passo automático de fim de tarefa (exports repetidos da mesma sessão viram lixo
+  versionado). Se o `AGENTS.md`/`CLAUDE.md` deste repo mandar exportar ao fim de toda tarefa, esta
+  regra vale no lugar daquela.
 - **Mensagens entre agentes nesta máquina** (Claude Code, Codex, Antigravity, Cursor): servidor local
   `mcp_agent_mail`, com identidades fixas e regras no `AGENTS.md` do hub (seção "Mensagens entre
   agentes"). Para conversa sobre um plano, prefira a issue.

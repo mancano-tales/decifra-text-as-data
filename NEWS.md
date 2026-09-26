@@ -1,5 +1,15 @@
 # NEWS
 
+## 2026-09-26 — Correction: export conversations only when the author asks (common governance v2026-09-26c)
+
+The previous entry followed a misunderstanding: the author did not want the exporter or its skills disabled, only to stop the instruction to export at the end of every task, which produces repeated copies of the same conversation. The common-governance block moved to v2026-09-26c with the rule rewritten: **export a conversation only when the author asks**. Plan: `repo-governance/plan/2026-09-26_Plano_AGENTS_Enxutos_e_Export_Sob_Demanda.md` in `mancano-repo-hub` (its issue #27).
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Commit message**: "docs(governance): common governance v2026-09-26c (export only when the author asks)"
+- **Files**: `AGENTS.md`, `NEWS.md`
+
 ## 2026-09-26 — Conversation exporter deprecated (common governance v2026-09-26b)
 
 **Author's decision, in chat:** disable the conversation exporter in every repository. Plan: `repo-governance/plan/2026-09-26_Plano_Descontinuar_Exportador_Conversas.md` in `mancano-repo-hub` (its issue #27). The common-governance block in `AGENTS.md` moved to v2026-09-26b, which adds the rule (the block itself is maintained in Portuguese in the hub and synced verbatim). This repository never had the exporter script, so nothing else changed.
