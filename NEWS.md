@@ -1,15 +1,15 @@
 # NEWS
 
-## 2026-09-26 — Documentação alinhada ao estado real do R1.1
+## 2026-09-26 — Docs aligned with the actual state of R1.1
 
-O `README.md`, o `README.pt-BR.md` e o `docs/MVP_STATUS.md` ainda diziam que os codebooks com várias variáveis eram "apenas desenho". Isso levou uma sessão de outro repositório (`bbsia-radar`, issue #6 de lá) a concluir, por engano, que o Decifra só classificava uma variável por codebook. O estado real: o formato foi aprovado pelo autor em 2026-09-13, o contrato do codebook e a validação multirrótulo estão no `main` (passos 1, 2 e 4 do R1.1), e falta o passo 3, que liga extração, estimativa e banco. Os dois READMEs e o `MVP_STATUS.md` agora dizem isso (o MVP em uso continua de variável única, porque a execução multivariável ainda é recusada). O `ROADMAP.md` ganhou a linha da aprovação de 2026-09-13, que só aparecia no §15 da especificação, e o cabeçalho da especificação, que ainda dizia "draft for author sign-off", passou a dizer que ela foi aprovada. Primeiro caso de uso externo que depende do R1.1: issue #4 (`bbsia-radar`).
+`README.md`, `README.pt-BR.md` and `docs/MVP_STATUS.md` still called multi-variable codebooks "design only". That led a session in another repository (`bbsia-radar`, its issue #6) to conclude, wrongly, that Decifra could only classify one variable per codebook. Actual state: the YAML shape was signed off by the author on 2026-09-13, the codebook contract and multi-label validation are on `main` (R1.1 steps 1, 2 and 4), and step 3 (wiring extraction, estimates and storage) is still missing. Both READMEs and `MVP_STATUS.md` now say so; the MVP as a user runs it is still single-variable, because a multi-variable run is still refused. `ROADMAP.md` gained the 2026-09-13 sign-off line, which previously appeared only in §15 of the spec, and the spec's header, which still read "draft for author sign-off", now says it was signed off. First external use case that depends on R1.1: issue #4 (`bbsia-radar`).
 
-**Metadados de Execução**:
-- **Data**: 2026-09-26
-- **Agente**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
 - **Issue**: #4
-- **Mensagem do Commit**: "docs: alinha README, MVP_STATUS e ROADMAP ao estado real do R1.1"
-- **Arquivos afetados**: `README.md`, `README.pt-BR.md`, `docs/MVP_STATUS.md`, `docs/ROADMAP.md`, `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`, `NEWS.md`
+- **Commits**: `734e913`, `1ca17bf` and the translation of this entry
+- **Files**: `README.md`, `README.pt-BR.md`, `docs/MVP_STATUS.md`, `docs/ROADMAP.md`, `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`, `NEWS.md`
 
 ## 2026-09-26 — Governança comum do ecossistema (v2026-09-26)
 
