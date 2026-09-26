@@ -74,6 +74,8 @@ component, or function you can point to.
 
 2026-09-13: spec revised to also cover **multi-label** variables (the DATALUTA SDG requirement, `TODO.md` 2026-09-09) — `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`. It supersedes the 2026-09-02 spec where the two differ (§1 has the keep/change/drop table), and lists six author decisions in §11 with recommended defaults. Still awaiting author sign-off; implementation order is the 11-step table in §10.
 
+2026-09-13: **author sign-off** on the revised spec (§15 of the 2026-09-13 design: recommended defaults accepted for all six §11 decisions, with the standing directive to expose a decision as a researcher option where possible). Implementation unblocked.
+
 2026-09-13: step 1 of the §10 plan (rename `categoria`/`justificativa`/`trecho_evidencia` → `category`/`rationale`/`evidence_span`, with in-place SQLite migration) merged into `main` as `078eadd` (plan: `docs/superpowers/plans/2026-09-13-r1.1-step1-rename-output-fields.md`); steps 2+ pending.
 
 2026-09-13: step 2 (codebook contract: variables, multi_label, evidence_granularity, per-variable schema/instructions/hash) merged into `main` as `4610368`. Next: step 3 (extraction/estimate/db consume Codebook.variables).

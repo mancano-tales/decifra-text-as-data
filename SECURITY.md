@@ -34,7 +34,7 @@ released.
   out to) — report those upstream.
 - Findings that require local admin/filesystem access to the machine
   running Decifra — this is a local-first tool with no remote deployment in
-  its current design (see `AGENTS.md`'s architecture section).
+  its current design (see the architecture section of `docs/PRODUCT_BRIEF.md`).
 
 ## Response expectations
 

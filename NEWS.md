@@ -1,14 +1,67 @@
 # NEWS
 
-## 2026-09-26 — Governança comum do ecossistema (v2026-09-26.2)
+## 2026-09-26 — Concise AGENTS.md (484 → 119 lines); the product brief moves to docs/PRODUCT_BRIEF.md
 
-Aplicado o bloco de governança comum mantido no hub (`mancano-tales/mancano-repo-hub`, `tools/governanca-comum/`): planos com issue (`tools/plano_issue.py`), base do `NEWS.md` derivada do git (`tools/news_db.py`), aprovação só no chat e no plano, mensagens de agentes como pedido, cabeçalho de agente, branch/PR opcionais, `NEWS.md` junto com a mudança e **datas sem hora**. O bloco fica entre marcadores no `AGENTS.md`; o que é específico deste repositório foi preservado.
+Author's decision (hub plan `repo-governance/plan/2026-09-26_Plano_AGENTS_Enxutos_e_Export_Sob_Demanda.md` in `mancano-repo-hub`, its issue #27): one short, current instruction file per repository. The common governance block is unchanged. The repository-specific part went from 437 to 72 lines.
 
-**Metadados de Execução**:
-- **Data**: 2026-09-26
-- **Agente**: Claude Code / Claude Opus 5.5 / desktop, via `tools/sync_governanca.py` do hub
-- **Mensagem do Commit**: "docs(governance): governanca comum v2026-09-26.2"
-- **Arquivos afetados**: AGENTS.md, CLAUDE.md, NEWS.md, tools/plano_issue.py, tools/news_db.py, .claude/settings.json
+**Where things went (nothing deleted):**
+- **Product Vision → `docs/PRODUCT_BRIEF.md`, verbatim**: the problem, MVP scope, architecture, codebook format, data model, screens, validation rationale, build order and V7 pilot data. Headings are unchanged, so the many existing references to "`AGENTS.md` § …" in code comments, specs, research notes and `disclosure.py` resolve there in one hop. `AGENTS.md` ends with a redirect list. README (EN and PT-BR) and `SECURITY.md` now point to the brief directly.
+- **Rules**, condensed and still in `AGENTS.md`:
+  - English everywhere;
+  - spec first;
+  - validation is not optional;
+  - codebook separate from the engine;
+  - closed architecture;
+  - UI strings through i18n;
+  - `TODO.md` and learnings notes;
+  - worktrees for concurrent sessions.
+- **New in `AGENTS.md`**:
+  - a "current state" pointer: `MVP_STATUS.md` and `ROADMAP.md`; R1.1 step 3 still pending;
+  - the module layout;
+  - the real commands (from `README.md`);
+  - the `bbsia-radar` use case (#4);
+  - the Windows CLI-mode pitfalls, so they are not regressed.
+- **Removed as stale**: the "light-weight governance (no `0-meta/`, see the parent ecosystem's `CLAUDE.md`)" paragraph. The hub's common block now governs this repo.
+- The naming history (Codifica → Cifra → Decifra, and the local folder still called `cifra-text-as-data`) stays in the brief, plus a one-line pitfall in `AGENTS.md`.
+
+Follow-up for R1.1 step 11: its spec asks for a multi-label example in "`AGENTS.md`'s codebook-format section". That section now lives in `docs/PRODUCT_BRIEF.md`.
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Commit message**: "docs(agents): concise AGENTS.md; product brief moves to docs/PRODUCT_BRIEF.md"
+- **Files affected**: `AGENTS.md`, `docs/PRODUCT_BRIEF.md`, `README.md`, `README.pt-BR.md`, `SECURITY.md`, `NEWS.md`
+
+## 2026-09-26 — Correction: export conversations only when the author asks (common governance v2026-09-26c)
+
+The previous entry followed a misunderstanding: the author did not want the exporter or its skills disabled, only to stop the instruction to export at the end of every task, which produces repeated copies of the same conversation. The common-governance block moved to v2026-09-26c with the rule rewritten: **export a conversation only when the author asks**. Plan: `repo-governance/plan/2026-09-26_Plano_AGENTS_Enxutos_e_Export_Sob_Demanda.md` in `mancano-repo-hub` (its issue #27).
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Commit message**: "docs(governance): common governance v2026-09-26c (export only when the author asks)"
+- **Files**: `AGENTS.md`, `NEWS.md`
+
+## 2026-09-26 — Conversation exporter deprecated (common governance v2026-09-26b)
+
+**Author's decision, in chat:** disable the conversation exporter in every repository. Plan: `repo-governance/plan/2026-09-26_Plano_Descontinuar_Exportador_Conversas.md` in `mancano-repo-hub` (its issue #27). The common-governance block in `AGENTS.md` moved to v2026-09-26b, which adds the rule (the block itself is maintained in Portuguese in the hub and synced verbatim). This repository never had the exporter script, so nothing else changed.
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web (block applied with `tools/sync_governanca.py aplicar --sem-commit`)
+- **Commit message**: "docs(governance): common governance v2026-09-26b (conversation exporter deprecated)"
+- **Files**: `AGENTS.md`, `NEWS.md`
+
+## 2026-09-26 — Docs aligned with the actual state of R1.1
+
+`README.md`, `README.pt-BR.md` and `docs/MVP_STATUS.md` still called multi-variable codebooks "design only". That led a session in another repository (`bbsia-radar`, its issue #6) to conclude, wrongly, that Decifra could only classify one variable per codebook. Actual state: the YAML shape was signed off by the author on 2026-09-13, the codebook contract and multi-label validation are on `main` (R1.1 steps 1, 2 and 4), and step 3 (wiring extraction, estimates and storage) is still missing. Both READMEs and `MVP_STATUS.md` now say so; the MVP as a user runs it is still single-variable, because a multi-variable run is still refused. `ROADMAP.md` gained the 2026-09-13 sign-off line, which previously appeared only in §15 of the spec, and the spec's header, which still read "draft for author sign-off", now says it was signed off. First external use case that depends on R1.1: issue #4 (`bbsia-radar`).
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Issue**: #4
+- **Commits**: `734e913`, `1ca17bf` and the translation of this entry
+- **Files**: `README.md`, `README.pt-BR.md`, `docs/MVP_STATUS.md`, `docs/ROADMAP.md`, `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`, `NEWS.md`
 
 ## 2026-09-26 — Governança comum do ecossistema (v2026-09-26)
 
