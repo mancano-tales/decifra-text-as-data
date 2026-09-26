@@ -1,5 +1,37 @@
 # NEWS
 
+## 2026-09-26 — Concise AGENTS.md (484 → 119 lines); the product brief moves to docs/PRODUCT_BRIEF.md
+
+Author's decision (hub plan `repo-governance/plan/2026-09-26_Plano_AGENTS_Enxutos_e_Export_Sob_Demanda.md` in `mancano-repo-hub`, its issue #27): one short, current instruction file per repository. The common governance block is unchanged. The repository-specific part went from 437 to 72 lines.
+
+**Where things went (nothing deleted):**
+- **Product Vision → `docs/PRODUCT_BRIEF.md`, verbatim**: the problem, MVP scope, architecture, codebook format, data model, screens, validation rationale, build order and V7 pilot data. Headings are unchanged, so the many existing references to "`AGENTS.md` § …" in code comments, specs, research notes and `disclosure.py` resolve there in one hop. `AGENTS.md` ends with a redirect list. README (EN and PT-BR) and `SECURITY.md` now point to the brief directly.
+- **Rules**, condensed and still in `AGENTS.md`:
+  - English everywhere;
+  - spec first;
+  - validation is not optional;
+  - codebook separate from the engine;
+  - closed architecture;
+  - UI strings through i18n;
+  - `TODO.md` and learnings notes;
+  - worktrees for concurrent sessions.
+- **New in `AGENTS.md`**:
+  - a "current state" pointer: `MVP_STATUS.md` and `ROADMAP.md`; R1.1 step 3 still pending;
+  - the module layout;
+  - the real commands (from `README.md`);
+  - the `bbsia-radar` use case (#4);
+  - the Windows CLI-mode pitfalls, so they are not regressed.
+- **Removed as stale**: the "light-weight governance (no `0-meta/`, see the parent ecosystem's `CLAUDE.md`)" paragraph. The hub's common block now governs this repo.
+- The naming history (Codifica → Cifra → Decifra, and the local folder still called `cifra-text-as-data`) stays in the brief, plus a one-line pitfall in `AGENTS.md`.
+
+Follow-up for R1.1 step 11: its spec asks for a multi-label example in "`AGENTS.md`'s codebook-format section". That section now lives in `docs/PRODUCT_BRIEF.md`.
+
+**Execution metadata**:
+- **Date**: 2026-09-26
+- **Agent**: Claude Code / Claude Opus 5.5 / Claude Code on the web
+- **Commit message**: "docs(agents): concise AGENTS.md; product brief moves to docs/PRODUCT_BRIEF.md"
+- **Files affected**: `AGENTS.md`, `docs/PRODUCT_BRIEF.md`, `README.md`, `README.pt-BR.md`, `SECURITY.md`, `NEWS.md`
+
 ## 2026-09-26 — Correction: export conversations only when the author asks (common governance v2026-09-26c)
 
 The previous entry followed a misunderstanding: the author did not want the exporter or its skills disabled, only to stop the instruction to export at the end of every task, which produces repeated copies of the same conversation. The common-governance block moved to v2026-09-26c with the rule rewritten: **export a conversation only when the author asks**. Plan: `repo-governance/plan/2026-09-26_Plano_AGENTS_Enxutos_e_Export_Sob_Demanda.md` in `mancano-repo-hub` (its issue #27).

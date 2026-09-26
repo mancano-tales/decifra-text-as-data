@@ -154,4 +154,4 @@ Executa a suíte de testes do backend cobrindo o motor de codebook, os dois modo
 
 ## Empacotamento (não iniciado)
 
-O plano (ver `AGENTS.md` § "Product trajectory") é um app desktop empacotado — o backend Python compilado em um único binário, rodando localmente, para que instalar o Decifra seja "baixar e abrir" em vez de "clonar o repositório e iniciar dois servidores de desenvolvimento". Esse trabalho ainda não começou. O `AGENTS.md` condiciona isso à validação do pipeline com uso real primeiro.
+O plano (ver [`docs/PRODUCT_BRIEF.md`](docs/PRODUCT_BRIEF.md) § "Product trajectory") é um app desktop empacotado — o backend Python compilado em um único binário, rodando localmente, para que instalar o Decifra seja "baixar e abrir" em vez de "clonar o repositório e iniciar dois servidores de desenvolvimento". Esse trabalho ainda não começou. O `AGENTS.md` condiciona isso à validação do pipeline com uso real primeiro.

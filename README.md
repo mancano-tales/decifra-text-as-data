@@ -154,4 +154,4 @@ Runs the backend test suite across the codebook engine, both provider modes, the
 
 ## Packaging (not started)
 
-The plan (see `AGENTS.md` § "Product trajectory") is a packaged desktop app — the Python backend compiled to a single binary, run locally, so installing Decifra is "download and open" rather than "clone a repo and run two dev servers." That work has not started. `AGENTS.md` gates it behind the pipeline being validated with real use first.
+The plan (see [`docs/PRODUCT_BRIEF.md`](docs/PRODUCT_BRIEF.md) § "Product trajectory") is a packaged desktop app — the Python backend compiled to a single binary, run locally, so installing Decifra is "download and open" rather than "clone a repo and run two dev servers." That work has not started. The brief gates it behind the pipeline being validated with real use first.
