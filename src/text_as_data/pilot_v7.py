@@ -214,8 +214,9 @@ def build_enriched_hypothesis_codebook_spec(pair_code: str, side_label: str) -> 
     both sides of a pair scored `muito_provavel` in over a third of cases
     (near-zero discriminating power), and inconsistent treatment of
     near-identical evidence. The fix is a richer prompt, not a different
-    model -- see AGENTS.md's validation rationale and this project's
-    memory note on diagnosing prompt/codebook gaps before model choice."""
+    model -- see "Why the validation step is not optional" in
+    `docs/PRODUCT_BRIEF.md`, and this project's memory note on diagnosing
+    prompt/codebook gaps before model choice."""
     pair = HYPOTHESIS_DEFINITIONS[pair_code]
     other_label = "b" if side_label == "a" else "a"
     this_side = pair[side_label]

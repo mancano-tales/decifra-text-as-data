@@ -115,7 +115,7 @@ class ExtractionRecord(SQLModel, table=True):
     # through unnoticed. Flagged for the researcher to see, not used to
     # invalidate category -- this repo's stance is that automated software
     # surfaces the signal, the researcher's judgment decides what to do
-    # with it (see AGENTS.md's Product Vision).
+    # with it (see `docs/PRODUCT_BRIEF.md`, "Product Vision").
     evidence_verified: bool = False
     # "exact" | "normalized" | "empty" | "too_short" | "not_found" | "" for
     # a pre-existing row migrated before this column existed.

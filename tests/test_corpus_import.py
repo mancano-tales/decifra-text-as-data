@@ -99,8 +99,8 @@ def test_parse_txt_bytes_decodes_utf8_with_bom():
 
 def test_parse_txt_bytes_fixes_mojibake():
     # "instituições" mis-decoded as Windows-1252 read as UTF-8 then
-    # re-encoded, the exact corruption pattern AGENTS.md's V7 pilot notes
-    # describe -- ftfy.fix_text() should undo it.
+    # re-encoded, the exact corruption pattern described in the V7 pilot
+    # notes in `docs/PRODUCT_BRIEF.md` -- ftfy.fix_text() should undo it.
     broken = "instituiÃ§Ãµes".encode("utf-8")
 
     text = parse_txt_bytes(broken)

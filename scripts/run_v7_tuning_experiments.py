@@ -181,9 +181,9 @@ def extraction_rows(engine, run_ids: dict[tuple[str, str], int]) -> pd.DataFrame
 
     Carries the complete hypothesis definition and the complete evidence
     text alongside every row, not just labels/IDs -- the author's explicit
-    requirement for every spreadsheet this pilot produces (AGENTS.md's
-    "Real-world pilot data" section, "so a human reviewer never has to
-    hunt down source material to check a row"), which the first version
+    requirement for every spreadsheet this pilot produces (see the
+    "Real-world pilot data" section of `docs/PRODUCT_BRIEF.md`: "so a human
+    reviewer never has to hunt down source material to check a row"), which the first version
     of this function failed to carry over from
     scripts/run_v7_candidates_via_agy.py despite having just read that
     convention while writing it."""

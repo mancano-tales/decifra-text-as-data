@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Start the Decifra backend (FastAPI/uvicorn) and frontend (Vite) together with
 # one command, for local development. Not a replacement for real packaging
-# (see AGENTS.md's Phase 2 plan) -- just removes the "two terminals" step
+# (see `docs/PRODUCT_BRIEF.md`, Architecture > Product trajectory > Phase 2)
+# -- just removes the "two terminals" step
 # from the manual dev workflow documented in README.md.
 #
 # Usage: scripts/dev.sh [backend_port] [frontend_port]

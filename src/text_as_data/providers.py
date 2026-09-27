@@ -21,8 +21,9 @@ class ProviderResult:
     after the fact, what an LLM was actually asked or actually said before
     `CliProvider._extract_json` stripped any surrounding prose. For a tool
     whose whole premise is that LLM coding must be auditable and
-    reproducible (see AGENTS.md's validation rationale), silently
-    discarding that is a real gap, not a cosmetic one."""
+    reproducible (see "Why the validation step is not optional" in
+    `docs/PRODUCT_BRIEF.md`), silently discarding that is a real gap, not a
+    cosmetic one."""
 
     parsed: BaseModel
     prompt: str
