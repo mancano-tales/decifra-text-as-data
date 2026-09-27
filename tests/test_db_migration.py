@@ -101,6 +101,9 @@ def test_get_engine_adds_evidence_verification_columns_to_an_existing_extraction
         # for a pre-existing row, rather than erroring or being NULL.
         assert loaded.evidence_verified is False
         assert loaded.evidence_match_tier == ""
+        assert loaded.variable == "main"
+        assert loaded.variable_spec_hash == ""
+        assert loaded.selections_json == ""
 
 
 def test_get_engine_renames_legacy_portuguese_columns_in_place(tmp_path):
@@ -145,3 +148,15 @@ def test_get_engine_renames_legacy_portuguese_columns_in_place(tmp_path):
     connection.close()
     assert {"category", "rationale", "evidence_span"} <= columns
     assert not ({"categoria", "justificativa", "trecho_evidencia"} & columns)
+
+
+def test_extraction_label_set_handles_single_multi_and_error_rows():
+    assert ExtractionRecord(
+        run_id=1, document_id=1, category="yes", rationale="r", evidence_span="e"
+    ).label_set() == frozenset({"yes"})
+    assert ExtractionRecord(
+        run_id=1, document_id=1, category="", rationale="r", evidence_span="", selections_json='[{"label":"a"},{"label":"b"}]'
+    ).label_set() == frozenset({"a", "b"})
+    assert ExtractionRecord(
+        run_id=1, document_id=1, category="__error__", rationale="failed", evidence_span="", selections_json="[]"
+    ).label_set() == frozenset()

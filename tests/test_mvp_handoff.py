@@ -5,9 +5,10 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from text_as_data import app as api, config
+from text_as_data.codebook import Codebook
 from text_as_data.db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord, get_engine
 from text_as_data.providers import ProviderResult, ApiKeyProvider
 from text_as_data.webapp import mount_frontend
@@ -52,9 +53,10 @@ def test_estimate_cache_bypass_and_review_exclusion(client):
     assert before["new_documents"] == 1 and before["input_tokens"] > 10
     assert before["estimated_usd"] is None
     with Session(engine) as session:
+        variable = Codebook.from_yaml_string(YAML).variables[0]
         run = RunRecord(codebook_id=1, corpus_id="sample", model="test-cli", provider_mode="cli", codebook_yaml_hash=hashlib.sha256(YAML.encode()).hexdigest())
         session.add(run); session.commit(); session.refresh(run)
-        session.add(ExtractionRecord(run_id=run.id, document_id=1,category="yes",rationale="original",evidence_span="collective action")); session.commit()
+        session.add(ExtractionRecord(run_id=run.id, document_id=1, variable=variable.name, variable_spec_hash=variable.spec_hash, category="yes",rationale="original",evidence_span="collective action")); session.commit()
         run_id = run.id
     assert http.post("/runs/estimate",json=request()).json()["cached_documents"] == 1
     assert http.post("/runs/estimate",json=request(bypass_cache=True)).json()["new_documents"] == 1
@@ -135,6 +137,79 @@ def test_estimate_missing_corpus_or_codebook(client):
     http, _ = client
     assert http.post("/runs/estimate",json=request(corpus_id="missing")).status_code == 404
     assert http.post("/runs/estimate",json=request(codebook_id=999)).status_code == 404
+
+
+def test_multi_variable_codebook_runs_from_api_through_estimate_and_sqlite(client):
+    http, engine = client
+    codebook_spec = {
+        "concept": "multi test",
+        "description": "A synthetic API integration codebook.",
+        "variables": [
+            {
+                "name": "event_type",
+                "description": "What kind of event is described?",
+                "categories": [
+                    {"label": "protest", "definition": "A public protest."},
+                    {"label": "other", "definition": "Something else."},
+                ],
+            },
+            {
+                "name": "areas",
+                "description": "Which areas of concern apply?",
+                "multi_label": True,
+                "max_labels": 2,
+                "categories": [
+                    {"label": "land", "definition": "Land conflict is central."},
+                    {"label": "rights", "definition": "Rights are central."},
+                ],
+            },
+        ],
+    }
+    created = http.post("/codebooks", json=codebook_spec)
+    assert created.status_code == 200, created.text
+    codebook_id = created.json()["id"]
+    run_request = request(codebook_id=codebook_id)
+
+    estimate = http.post("/runs/estimate", json=run_request)
+    assert estimate.status_code == 200, estimate.text
+    assert estimate.json()["total_calls"] == 2
+    assert estimate.json()["new_calls"] == 2
+    assert estimate.json()["output_tokens"] == config.read_settings().output_tokens_per_document * 3
+
+    calls = []
+
+    def extract(messages, schema):
+        calls.append(messages)
+        properties = schema.model_json_schema()["properties"]
+        quote = messages[-1]["content"]
+        if "category" in properties:
+            parsed = schema(category=properties["category"]["enum"][0], rationale="single", evidence_span=quote)
+        else:
+            selection_type = schema.model_fields["selections"].annotation.__args__[0]
+            label = selection_type.model_json_schema()["properties"]["label"]["enum"][0]
+            parsed = schema(
+                selections=[selection_type(label=label, rationale="per label", evidence_span=quote)],
+                rationale="set rationale",
+            )
+        return ProviderResult(parsed=parsed, prompt="api prompt", raw_response=parsed.model_dump_json())
+
+    api.app.dependency_overrides[api.get_provider_dependency] = lambda: SimpleNamespace(extract=extract)
+    run_id = http.post("/runs", json=run_request).json()["run_id"]
+    results = http.get(f"/runs/{run_id}/results").json()
+    assert len(calls) == 2
+    assert {row["variable"] for row in results} == {"event_type", "areas"}
+    areas = next(row for row in results if row["variable"] == "areas")
+    assert areas["category"] == ""
+    assert json.loads(areas["selections_json"])[0]["label"] == "land"
+
+    cached_estimate = http.post("/runs/estimate", json=run_request).json()
+    assert cached_estimate["cached_calls"] == 2
+    assert cached_estimate["new_calls"] == 0
+    with Session(engine) as session:
+        persisted = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)
+        ).all()
+        assert len(persisted) == 2
 
 
 def test_validation_coverage_excludes_other_corpora(client):

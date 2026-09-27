@@ -5,10 +5,10 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
 import yaml
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, BeforeValidator, Field, create_model
 
 
 class _CodebookYamlLoader(yaml.SafeLoader):
@@ -325,6 +325,40 @@ def _build_single_label_schema(model_name: str, labels: list[str]) -> type[BaseM
     )
 
 
+def _dedupe_label_values(values):
+    """Remove repeated string labels before list bounds are validated.
+
+    A repeated label must not make an otherwise valid set exceed
+    `max_labels`. Invalid non-string values are left for Pydantic's Literal
+    validation to reject with its normal error.
+    """
+    if not isinstance(values, list):
+        return values
+    result = []
+    seen = set()
+    for value in values:
+        if not isinstance(value, str) or value not in seen:
+            result.append(value)
+        if isinstance(value, str):
+            seen.add(value)
+    return result
+
+
+def _dedupe_selection_values(values):
+    """Deduplicate per-label selection objects by label, first occurrence wins."""
+    if not isinstance(values, list):
+        return values
+    result = []
+    seen = set()
+    for value in values:
+        label = value.get("label") if isinstance(value, dict) else getattr(value, "label", None)
+        if not isinstance(label, str) or label not in seen:
+            result.append(value)
+        if isinstance(label, str):
+            seen.add(label)
+    return result
+
+
 def _build_multi_label_schema(
     model_name: str, labels: list[str], *, min_labels: int, max_labels: int | None, evidence_granularity: str
 ) -> type[BaseModel]:
@@ -332,10 +366,11 @@ def _build_multi_label_schema(
     if max_labels is not None:
         list_kwargs["max_length"] = max_labels
     if evidence_granularity == "per_set":
+        label_list = Annotated[list[Literal[tuple(labels)]], BeforeValidator(_dedupe_label_values)]
         return create_model(
             model_name,
             labels=(
-                list[Literal[tuple(labels)]],
+                label_list,
                 Field(**list_kwargs, description="Every category whose definition is met, and only those. Empty if none applies."),
             ),
             rationale=(str, Field(description="Overall reasoning for the set as a whole, including near-miss categories considered and why they were not selected.")),
@@ -347,10 +382,11 @@ def _build_multi_label_schema(
         rationale=(str, Field(description="Why this label applies to this document.")),
         evidence_span=(str, Field(description="Verbatim quote from the document that grounds THIS label.")),
     )
+    selection_list = Annotated[list[selection], BeforeValidator(_dedupe_selection_values)]
     return create_model(
         model_name,
         selections=(
-            list[selection],
+            selection_list,
             Field(**list_kwargs, description="Every category whose definition is met, and only those. Empty if none applies."),
         ),
         rationale=(str, Field(description="Overall reasoning for the set as a whole, including near-miss categories considered and why they were not selected.")),

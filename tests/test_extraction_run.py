@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -38,9 +40,9 @@ class AlwaysFailingProvider(Provider):
         raise ValueError(self._message)
 
 
-def _seed(engine, n_documents: int = 2) -> tuple[int, str]:
+def _seed(engine, n_documents: int = 2, yaml_text: str = YAML_SOURCE) -> tuple[int, str]:
     with Session(engine) as session:
-        codebook = CodebookRecord(name="test", yaml_raw=YAML_SOURCE)
+        codebook = CodebookRecord(name="test", yaml_raw=yaml_text)
         session.add(codebook)
         session.commit()
         session.refresh(codebook)
@@ -194,7 +196,7 @@ def test_run_extraction_does_not_treat_error_row_as_cached():
 
 
 def test_run_extraction_records_build_messages_failure_as_error_row_without_crashing(monkeypatch):
-    def _raise(self, text, include_persona=True):
+    def _raise(self, text, variable=None, include_persona=True):
         raise ValueError("mojibake broke build_messages")
 
     monkeypatch.setattr(Codebook, "build_messages", _raise)
@@ -248,7 +250,7 @@ def test_run_extraction_persists_best_effort_prompt_on_provider_failure():
 
 
 def test_run_extraction_leaves_prompt_empty_when_build_messages_fails(monkeypatch):
-    def _raise(self, text, include_persona=True):
+    def _raise(self, text, variable=None, include_persona=True):
         raise ValueError("mojibake broke build_messages")
 
     monkeypatch.setattr(Codebook, "build_messages", _raise)
@@ -321,6 +323,190 @@ def test_run_extraction_does_not_reuse_cache_after_codebook_is_edited_in_place()
     with Session(engine) as session:
         extractions = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
         assert len(extractions) == 1
+
+
+TWO_VARIABLE_YAML = """
+concept: test_concept
+description: A test codebook.
+variables:
+  - name: topic
+    description: Which topic applies?
+    categories:
+      - {label: first, definition: The first topic.}
+      - {label: second, definition: The second topic.}
+  - name: tags
+    description: Which tags apply?
+    multi_label: true
+    max_labels: 2
+    categories:
+      - {label: alpha, definition: Alpha applies.}
+      - {label: beta, definition: Beta applies.}
+"""
+
+
+class VariableAwareProvider(Provider):
+    """Build a valid deterministic response for each schema shape."""
+
+    def __init__(self, *, duplicate=False, empty=False, reverse=False):
+        self.calls = []
+        self.duplicate = duplicate
+        self.empty = empty
+        self.reverse = reverse
+
+    def extract(self, messages, schema):
+        self.calls.append((messages, schema))
+        document_text = messages[-1]["content"]
+        quote = document_text[:24]
+        properties = schema.model_json_schema()["properties"]
+        if "category" in properties:
+            label = properties["category"]["enum"][0]
+            parsed = schema(category=label, rationale="single label", evidence_span=quote)
+        elif "selections" in properties:
+            selection_type = schema.model_fields["selections"].annotation.__args__[0]
+            labels = selection_type.model_json_schema()["properties"]["label"]["enum"]
+            if self.empty:
+                items = []
+            elif self.duplicate:
+                order = list(reversed(labels))
+                items = [
+                    selection_type(label=label, rationale="first rationale", evidence_span=quote)
+                    for label in order
+                ]
+                items.append(
+                    selection_type(label=order[0], rationale="duplicate rationale", evidence_span="wrong quote")
+                )
+            else:
+                order = list(reversed(labels)) if self.reverse else labels[:1]
+                items = [
+                    selection_type(label=label, rationale="first rationale", evidence_span=quote)
+                    for label in order
+                ]
+            parsed = schema(selections=items, rationale="set rationale")
+        else:
+            labels = properties["labels"]["items"]["enum"]
+            selected = [] if self.empty else (list(reversed(labels)) if self.duplicate or self.reverse else labels[:1])
+            if self.duplicate and selected:
+                selected.append(selected[0])
+            parsed = schema(labels=selected, rationale="set rationale", evidence_span=quote)
+        return ProviderResult(parsed=parsed, prompt="variable prompt", raw_response=parsed.model_dump_json(), tokens_used=9)
+
+
+def test_run_extraction_creates_one_row_per_document_variable_and_stores_variable_hashes():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=2, yaml_text=TWO_VARIABLE_YAML)
+    provider = VariableAwareProvider()
+
+    run_extraction(engine, run_id, provider)
+
+    with Session(engine) as session:
+        rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == run_id)).all()
+        run = session.get(RunRecord, run_id)
+        assert {(row.document_id, row.variable) for row in rows} == {
+            (document_id, variable) for document_id in (1, 2) for variable in ("topic", "tags")
+        }
+        assert all(row.variable_spec_hash for row in rows)
+        assert run.status == "done"
+    assert len(provider.calls) == 4
+
+
+def test_multi_label_extraction_deduplicates_and_verifies_each_quote_in_codebook_order():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1, yaml_text=TWO_VARIABLE_YAML)
+
+    run_extraction(engine, run_id, VariableAwareProvider(duplicate=True))
+
+    with Session(engine) as session:
+        row = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == run_id, ExtractionRecord.variable == "tags")
+        ).one()
+        assert row.category != ERROR_CATEGORY, row.rationale
+        selections = json.loads(row.selections_json)
+        assert row.category == ""
+        assert [item["label"] for item in selections] == ["alpha", "beta"]
+        assert selections[1]["rationale"] == "first rationale"
+        assert all(item["evidence_verified"] for item in selections)
+        assert row.rationale == "set rationale"
+        assert row.evidence_span == ""
+        assert row.evidence_verified is True
+        assert row.evidence_match_tier == "per_label"
+        assert row.label_set() == frozenset({"alpha", "beta"})
+
+
+def test_per_set_extraction_stores_flat_evidence_and_shape_independent_selections():
+    yaml_text = TWO_VARIABLE_YAML.replace("max_labels: 2", "max_labels: 2\n    evidence_granularity: per_set")
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1, yaml_text=yaml_text)
+
+    run_extraction(engine, run_id, VariableAwareProvider(duplicate=True))
+
+    with Session(engine) as session:
+        row = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == run_id, ExtractionRecord.variable == "tags")
+        ).one()
+        assert row.category != ERROR_CATEGORY, row.rationale
+        selections = json.loads(row.selections_json)
+        assert [item["label"] for item in selections] == ["alpha", "beta"]
+        assert selections[0]["rationale"] == selections[0]["evidence_span"] == ""
+        assert selections[0]["evidence_match_tier"] == "per_set"
+        assert row.evidence_span == "document 0"
+        assert row.evidence_verified is True
+        assert row.evidence_match_tier == "per_set"
+        assert row.label_set() == frozenset({"alpha", "beta"})
+
+
+def test_multi_label_selections_are_stored_in_codebook_order():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1, yaml_text=TWO_VARIABLE_YAML)
+
+    run_extraction(engine, run_id, VariableAwareProvider(reverse=True))
+
+    with Session(engine) as session:
+        row = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == run_id, ExtractionRecord.variable == "tags")
+        ).one()
+        assert [item["label"] for item in json.loads(row.selections_json)] == ["alpha", "beta"]
+
+
+def test_empty_multi_label_set_round_trips_as_empty_json_set():
+    engine = get_engine("sqlite://")
+    run_id, _ = _seed(engine, n_documents=1, yaml_text=TWO_VARIABLE_YAML)
+
+    run_extraction(engine, run_id, VariableAwareProvider(empty=True))
+
+    with Session(engine) as session:
+        row = session.exec(
+            select(ExtractionRecord).where(ExtractionRecord.run_id == run_id, ExtractionRecord.variable == "tags")
+        ).one()
+        assert row.selections_json == "[]"
+        assert row.label_set() == frozenset()
+        assert row.evidence_verified is True
+        assert row.evidence_match_tier == "none_selected"
+
+
+def test_variable_cache_survives_edits_to_other_variables():
+    engine = get_engine("sqlite://")
+    run_id, corpus_id = _seed(engine, n_documents=1, yaml_text=TWO_VARIABLE_YAML)
+    provider = VariableAwareProvider()
+    run_extraction(engine, run_id, provider)
+    assert len(provider.calls) == 2
+
+    with Session(engine) as session:
+        run = session.get(RunRecord, run_id)
+        codebook = session.get(CodebookRecord, run.codebook_id)
+        codebook.yaml_raw = codebook.yaml_raw.replace("The first topic.", "The first topic, edited.")
+        session.add(codebook)
+        second_run = RunRecord(codebook_id=run.codebook_id, corpus_id=corpus_id, model="fake-model")
+        session.add(second_run)
+        session.commit()
+        session.refresh(second_run)
+        second_run_id = second_run.id
+
+    run_extraction(engine, second_run_id, provider)
+
+    assert len(provider.calls) == 3  # only the edited variable required a new call
+    with Session(engine) as session:
+        rows = session.exec(select(ExtractionRecord).where(ExtractionRecord.run_id == second_run_id)).all()
+        assert {row.variable for row in rows} == {"topic", "tags"}
 
 
 def test_run_extraction_records_the_codebook_yaml_hash_on_the_run():
@@ -445,19 +631,12 @@ def test_run_extraction_copies_verification_result_on_cache_hit_instead_of_recom
         assert extraction.evidence_match_tier == "exact"
 
 
-def test_run_extraction_refuses_a_multi_variable_codebook_until_step_3_wires_it():
-    """Interim guard (R1.1 step 2): a codebook with more than one variable
-    loads fine but must not silently run through the single-variable path.
-    Step 3 replaces this with the real per-variable loop."""
-    yaml_text = (
-        "concept: c\ndescription: d\nvariables:\n"
-        "  - name: a\n    description: q\n    categories:\n      - {label: x, definition: dx}\n"
-        "  - name: b\n    description: q\n    categories:\n      - {label: y, definition: dy}\n"
-    )
-    assert len(Codebook.from_yaml_string(yaml_text).variables) == 2  # loads fine on its own
+def test_run_extraction_refuses_joint_prompt_strategy_until_step_8():
+    yaml_text = "prompt_strategy: joint\n" + TWO_VARIABLE_YAML
+    assert len(Codebook.from_yaml_string(yaml_text).variables) == 2
     engine = get_engine("sqlite://")
     with Session(engine) as session:
-        codebook = CodebookRecord(name="two-variable", yaml_raw=yaml_text)
+        codebook = CodebookRecord(name="joint", yaml_raw=yaml_text)
         session.add(codebook)
         session.commit()
         session.refresh(codebook)
@@ -470,7 +649,7 @@ def test_run_extraction_refuses_a_multi_variable_codebook_until_step_3_wires_it(
         run_id = run.id
     provider = CountingFakeProvider()
 
-    with pytest.raises(NotImplementedError, match="multi-variable"):
+    with pytest.raises(NotImplementedError, match="joint"):
         run_extraction(engine, run_id, provider)
 
     # The guard fires before any provider call, and the run is marked as

@@ -106,11 +106,10 @@ def _extract_with_retry(provider: Provider, messages: list[dict], schema):
 
 
 def run_extraction(engine, run_id: int, provider: Provider, include_persona: bool = True) -> None:
-    """Execute a run: for every document in the run's corpus, reuse a cached
-    extraction if one exists for the same (document, codebook, model), else
-    call the provider (with retry) and persist the result. A single
-    document's failure is recorded as an error row, not a crash of the
-    whole run. A failure *outside* the per-document loop (bad codebook
+    """Execute a run: for every document-variable pair in the run's corpus,
+    reuse a matching cached extraction or call the provider and persist it.
+    A single pair's failure is recorded as an error row, not a crash of the
+    whole run. A failure *outside* the pair loop (bad codebook
     YAML, a database error) marks the run's own status as "error" instead
     of leaving it stuck at "running" forever — this is the caller's
     (`app.py`'s `BackgroundTasks`) only signal that something went wrong,
@@ -135,18 +134,10 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
         try:
             codebook_record = session.get(CodebookRecord, run.codebook_id)
             codebook = Codebook.from_yaml_string(codebook_record.yaml_raw)
-            if len(codebook.variables) > 1:
-                # R1.1 step 2 interim guard: the per-variable loop lands in
-                # step 3. Until then a multi-variable codebook must fail
-                # loudly here (marking the run "error" via the except below)
-                # rather than run its first variable as if it were the whole
-                # codebook -- or, as actually happens without this check,
-                # have every document's build_messages() ValueError swallowed
-                # into an "__error__" row by the per-document handler.
+            if codebook.prompt_strategy != "per_variable":
                 raise NotImplementedError(
-                    f"multi-variable codebooks ({[v.name for v in codebook.variables]}) are not yet supported by "
-                    "run_extraction; see docs/superpowers/specs/"
-                    "2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md §10 step 3"
+                    "prompt_strategy='joint' is not yet supported by run_extraction; "
+                    "see docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md §10 step 8"
                 )
             codebook_yaml_hash = hashlib.sha256(codebook_record.yaml_raw.encode("utf-8")).hexdigest()
             run.codebook_yaml_hash = codebook_yaml_hash
@@ -158,99 +149,123 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
             ).all()
 
             for document in documents:
-                # A reproducibility-verification run (bypass_cache=True)
-                # must never see a cached hit -- serving a prior run's
-                # cached answer back would make "run it again" always
-                # agree with itself by construction, defeating the whole
-                # point of testing whether the LLM's own output is stable.
-                tokens_used = None
-                cached = None
-                if not run.bypass_cache:
-                    cached = session.exec(
-                        select(ExtractionRecord)
-                        .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
-                        .where(
-                            ExtractionRecord.document_id == document.id,
-                            # Matching on the codebook's actual content hash,
-                            # not codebook_id alone -- a codebook can be
-                            # edited in place (same id, new yaml_raw), and a
-                            # cache hit keyed only on the id would silently
-                            # reuse extractions produced under the *old*
-                            # definition. RunRecord.codebook_id is still
-                            # required in the join so an unrelated codebook
-                            # that happens to hash-collide (practically
-                            # impossible with sha256, but free to assert)
-                            # can never match.
-                            RunRecord.codebook_id == run.codebook_id,
-                            RunRecord.codebook_yaml_hash == codebook_yaml_hash,
-                            RunRecord.model == run.model,
-                            RunRecord.provider_mode == run.provider_mode,
-                            ExtractionRecord.original_result_json == "",
-                            ExtractionRecord.category != ERROR_CATEGORY,
+                for variable in codebook.variables:
+                    # A reproducibility-verification run (bypass_cache=True)
+                    # must never see a cached hit -- serving a prior run's
+                    # cached answer back would make "run it again" always
+                    # agree with itself by construction, defeating the whole
+                    # point of testing whether the LLM's own output is stable.
+                    tokens_used = None
+                    cached = None
+                    if not run.bypass_cache:
+                        cached = session.exec(
+                            select(ExtractionRecord)
+                            .join(RunRecord, ExtractionRecord.run_id == RunRecord.id)
+                            .where(
+                                ExtractionRecord.document_id == document.id,
+                                ExtractionRecord.variable == variable.name,
+                                ExtractionRecord.variable_spec_hash == variable.spec_hash,
+                                RunRecord.codebook_id == run.codebook_id,
+                                RunRecord.model == run.model,
+                                RunRecord.provider_mode == run.provider_mode,
+                                ExtractionRecord.original_result_json == "",
+                                ExtractionRecord.category != ERROR_CATEGORY,
+                            )
+                            .order_by(ExtractionRecord.id.desc())
+                        ).first()
+
+                    if cached is not None:
+                        tokens_used = 0
+                        category, rationale, evidence_span = cached.category, cached.rationale, cached.evidence_span
+                        evidence_verified, evidence_match_tier = cached.evidence_verified, cached.evidence_match_tier
+                        selections_json = cached.selections_json
+                        prompt_sent, raw_response = cached.prompt_sent, cached.raw_response
+                    else:
+                        prompt_sent, raw_response = "", ""
+                        selections_json = ""
+                        try:
+                            messages = codebook.build_messages(
+                                document.text, variable=variable, include_persona=include_persona
+                            )
+                            prompt_sent = json.dumps(messages, ensure_ascii=False)
+                            result = _extract_with_retry(provider, messages, variable.schema)
+                            parsed = result.parsed.model_dump()
+                            prompt_sent, raw_response = result.prompt, result.raw_response
+                            tokens_used = result.tokens_used
+                            category, rationale, evidence_span = "", parsed.get("rationale", ""), ""
+                            if not variable.multi_label:
+                                category = parsed["category"]
+                                evidence_span = parsed["evidence_span"]
+                                evidence_verified, evidence_match_tier = verify_evidence_span(
+                                    evidence_span, document.text
+                                )
+                            elif variable.evidence_granularity == "per_set":
+                                selected_labels = set(parsed["labels"])
+                                ordered_labels = [label for label in variable.labels if label in selected_labels]
+                                evidence_span = parsed["evidence_span"]
+                                set_verified, _ = verify_evidence_span(evidence_span, document.text)
+                                selections = [
+                                    {
+                                        "label": label,
+                                        "rationale": "",
+                                        "evidence_span": "",
+                                        "evidence_verified": set_verified,
+                                        "evidence_match_tier": "per_set",
+                                    }
+                                    for label in ordered_labels
+                                ]
+                                evidence_verified = set_verified
+                                evidence_match_tier = "per_set" if ordered_labels else "none_selected"
+                                selections_json = json.dumps(selections, ensure_ascii=False)
+                            else:
+                                first_by_label = {}
+                                for selection in parsed["selections"]:
+                                    first_by_label.setdefault(selection["label"], selection)
+                                selections = []
+                                for label in variable.labels:
+                                    if label not in first_by_label:
+                                        continue
+                                    selection = first_by_label[label]
+                                    verified, tier = verify_evidence_span(selection["evidence_span"], document.text)
+                                    selections.append(
+                                        {
+                                            "label": label,
+                                            "rationale": selection["rationale"],
+                                            "evidence_span": selection["evidence_span"],
+                                            "evidence_verified": verified,
+                                            "evidence_match_tier": tier,
+                                        }
+                                    )
+                                evidence_verified = all(item["evidence_verified"] for item in selections)
+                                evidence_match_tier = "per_label" if selections else "none_selected"
+                                selections_json = json.dumps(selections, ensure_ascii=False)
+                        except Exception as exc:  # noqa: BLE001 -- one variable must not kill a run
+                            error_message = str(exc)
+                            if len(error_message) > 2000:
+                                error_message = error_message[:2000] + "... [truncated]"
+                            category, rationale, evidence_span = ERROR_CATEGORY, error_message, ""
+                            evidence_verified, evidence_match_tier, selections_json = False, "", ""
+
+                    session.add(
+                        ExtractionRecord(
+                            run_id=run.id,
+                            document_id=document.id,
+                            variable=variable.name,
+                            variable_spec_hash=variable.spec_hash,
+                            category=category,
+                            rationale=rationale,
+                            evidence_span=evidence_span,
+                            evidence_verified=evidence_verified,
+                            evidence_match_tier=evidence_match_tier,
+                            selections_json=selections_json,
+                            prompt_sent=prompt_sent,
+                            raw_response=raw_response,
+                            tokens_used=tokens_used,
                         )
-                        .order_by(ExtractionRecord.id.desc())
-                    ).first()
-
-                if cached is not None:
-                    tokens_used = 0
-                    category, rationale, evidence_span = (
-                        cached.category,
-                        cached.rationale,
-                        cached.evidence_span,
                     )
-                    evidence_verified, evidence_match_tier = (
-                        cached.evidence_verified,
-                        cached.evidence_match_tier,
-                    )
-                    prompt_sent, raw_response = cached.prompt_sent, cached.raw_response
-                else:
-                    # Best-effort fallback if build_messages succeeds but the
-                    # provider call itself fails: still record what was
-                    # *going* to be sent, even without the provider's own
-                    # (more precise, e.g. CLI-schema-suffixed) prompt string.
-                    prompt_sent, raw_response = "", ""
-                    try:
-                        messages = codebook.build_messages(document.text, include_persona=include_persona)
-                        prompt_sent = json.dumps(messages, ensure_ascii=False)
-                        result = _extract_with_retry(provider, messages, codebook.schema)
-                        category, rationale, evidence_span = (
-                            result.parsed.category,
-                            result.parsed.rationale,
-                            result.parsed.evidence_span,
-                        )
-                        prompt_sent, raw_response = result.prompt, result.raw_response
-                        tokens_used = result.tokens_used
-                    except Exception as exc:  # noqa: BLE001 -- one bad document must not kill the run
-                        # A subprocess.TimeoutExpired's str() includes
-                        # whatever partial stdout/stderr was captured before
-                        # the kill -- for a CLI provider that can be large,
-                        # and it would otherwise land verbatim in this TEXT
-                        # column. Truncated defensively for any exception
-                        # type, not just that one.
-                        error_message = str(exc)
-                        if len(error_message) > 2000:
-                            error_message = error_message[:2000] + "... [truncated]"
-                        category, rationale, evidence_span = ERROR_CATEGORY, error_message, ""
-
-                    evidence_verified, evidence_match_tier = verify_evidence_span(evidence_span, document.text)
-
-                session.add(
-                    ExtractionRecord(
-                        run_id=run.id,
-                        document_id=document.id,
-                        category=category,
-                        rationale=rationale,
-                        evidence_span=evidence_span,
-                        evidence_verified=evidence_verified,
-                        evidence_match_tier=evidence_match_tier,
-                        prompt_sent=prompt_sent,
-                        raw_response=raw_response,
-                        tokens_used=tokens_used,
-                    )
-                )
-                session.commit()
+                    session.commit()
         except Exception:
-            logger.exception("run_extraction failed outside the per-document loop (run_id=%s)", run_id)
+            logger.exception("run_extraction failed outside the per-pair loop (run_id=%s)", run_id)
             run.status = "error"
             session.add(run)
             session.commit()

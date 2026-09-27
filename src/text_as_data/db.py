@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from sqlalchemy import event
@@ -105,6 +106,8 @@ class ExtractionRecord(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     run_id: int = Field(foreign_key="runs.id")
     document_id: int = Field(foreign_key="documents.id")
+    variable: str = "main"
+    variable_spec_hash: str = ""
     category: str
     rationale: str
     evidence_span: str
@@ -120,6 +123,7 @@ class ExtractionRecord(SQLModel, table=True):
     # "exact" | "normalized" | "empty" | "too_short" | "not_found" | "" for
     # a pre-existing row migrated before this column existed.
     evidence_match_tier: str = ""
+    selections_json: str = ""
     tokens_used: int | None = None
     original_result_json: str = ""
     # Audit trail: the exact prompt sent and the raw (pre-parsing) response
@@ -129,6 +133,14 @@ class ExtractionRecord(SQLModel, table=True):
     # happened before any prompt could be built.
     prompt_sent: str = ""
     raw_response: str = ""
+
+    def label_set(self) -> frozenset[str]:
+        """Return the labels in this answer, independent of its storage shape."""
+        if self.category == "__error__":
+            return frozenset()
+        if self.selections_json:
+            return frozenset(item["label"] for item in json.loads(self.selections_json))
+        return frozenset({self.category}) if self.category else frozenset()
 
 
 # SQLModel/SQLAlchemy field type -> SQLite column type, for the additive

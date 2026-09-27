@@ -81,6 +81,8 @@ component, or function you can point to.
 2026-09-13: step 2 (codebook contract: variables, multi_label, evidence_granularity, per-variable schema/instructions/hash) merged into `main` as `4610368`. Next: step 3 (extraction/estimate/db consume Codebook.variables).
 2026-09-13: step 4 (multilabel_agreement_report + reproducibility relabeling, validation.py) merged into `main` as `7c49b7f`.
 
+2026-09-27: step 3 is implemented on `codex/r1.1-step3`; [PR #8](https://github.com/mancano-tales/decifra-text-as-data/pull/8) is open for author review and merge. The end-to-end path is covered through the API; `CodebookSpecRequest` now accepts `variables:` as required for creating the codebook, while the results projection, validation/gold APIs, progress/export/disclosure and frontend work remain in steps 5–7. Step 8 (`joint`), step 9 (V7 pilot migration) and optional step 10 (legacy cache backfill) are still open.
+
 **Depends on**: nothing (do it before R2.x so nothing else has to migrate
 twice). **Size**: the largest item on this list; multi-day.
 **Spec first**: **yes**, and get the author's sign-off on the YAML shape

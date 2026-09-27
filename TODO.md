@@ -2,11 +2,6 @@
 
 ## Pending
 
-- 2026-09-27 — **Issue #7 reference cleanup is in PR review.** Branch
-  `codex/issue-7-product-brief-refs` remains open for the separate PR and
-  awaits the author's review and merge. Created by Codex; completion is
-  recorded after the author merges the PR.
-
 - 2026-09-13 — **Frontend has no automated tests.** The R1.1 step 1 rename
   of `ResultsTable.tsx`/`api.ts` was verified only by `tsc` (via `npm run
   build`) and lint — strong for *references*, blind to *behaviour* (the
@@ -20,26 +15,17 @@
   validation panel's `kind` branch. Keep it small — the backend suite is
   where correctness lives; these are guardrails for the JSX.
 
-- 2026-09-09 — **Feature: multi-label codebooks.** `codebook.py`'s
-  `_from_spec` builds `categoria=(Literal[tuple(labels)], ...)` — exactly
-  one category per document. That makes a whole class of real coding
-  schemes unrepresentable: the UN SDG scheme the DATALUTA group codes
-  against assigns a mean of 2.5 of 17 labels per news item, and only 24%
-  of their documents carry exactly one. The pilot in
-  `MancanoSync/decifra-dataluta-pilot/` had to work around this by
-  decomposing into N binary one-vs-rest codebooks, which costs N passes
-  over the corpus and loses any joint reasoning across labels. Making it
-  real is not just a schema edit: `categoria` is a fixed contract read by
-  exact field name in `db.py`'s `ExtractionRecord`, `run_extraction`, the
-  export/validation endpoints and the frontend, and `validation.py`'s
-  `agreement_report` assumes single-label when it computes kappa (a
-  multi-label report needs per-label kappa plus a set-agreement measure
-  such as Jaccard or Krippendorff's alpha). Suggested shape: keep
-  single-label as the default and add an opt-in `multi_label: true` in the
-  codebook spec that switches `categoria` to `list[Literal[...]]`, with
-  the DB storing a JSON array and validation branching on the codebook's
-  own declaration. Design it before building — this touches the widest
-  surface of any pending feature.
+- 2026-09-09 — **Multi-variable and multi-label codebooks (R1.1 follow-through).**
+  The author-approved design is in
+  `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`.
+  R1.1 steps 1, 2 and 4 are merged; step 3 is implemented on
+  `codex/r1.1-step3`; [PR #8](https://github.com/mancano-tales/decifra-text-as-data/pull/8)
+  is open for author review and merge. Remaining work is
+  tracked in `docs/ROADMAP.md` R1.1: result and validation API projections,
+  frontend support, the optional `joint` strategy, legacy cache backfill,
+  and final docs/examples. The original DATALUTA use case has 17 SDG labels
+  and averages 2.5 labels per article, so multi-label support is a real
+  requirement rather than a schema exercise.
 
 - 2026-09-13 — **`CliProvider` `arg` mode: alternative input path for long
   documents.** The 2026-09-13 fix (see Done) only makes the failure clear;
@@ -138,6 +124,31 @@
   until this is fixed properly.
 
 ## Done
+
+- 2026-09-27 — **Issue #7: point live product brief references to
+  `docs/PRODUCT_BRIEF.md`.** Updated live code, script, and test-comment
+  references; kept the source reference to `AGENTS.md` that still points to
+  an active repository rule. [PR #9](https://github.com/mancano-tales/decifra-text-as-data/pull/9)
+  merged. **Completed by:** Codex / GPT-6 / Codex desktop, 2026-09-27;
+  issue #7.
+
+- 2026-09-27 — **R1.1 step 3: extraction, estimates and SQLite consume `Codebook.variables`.**
+  A run now writes one extraction per document-variable pair; each cache key
+  uses that variable's `spec_hash` plus the codebook/model/provider and
+  human-review/error filters. Single-label answers retain the existing flat
+  fields; multi-label answers store codebook-ordered, deduplicated selections
+  with per-selection or per-set evidence verification. SQLite adds the
+  variable/hash/selection columns and `label_set()`. Estimates expose
+  document-variable call counts and scale multi-label output tokens by the
+  configured upper bound. The codebook API accepts `variables:` so the
+  synthetic end-to-end API test uses the same path as a caller. Full suite:
+  347 passed; frontend lint and build passed. Plan:
+  `docs/superpowers/plans/2026-09-27-r1.1-step3-extraction-estimate-storage.md`.
+  **Learning:** the existing run request could start a persisted multi-variable
+  codebook, but `/codebooks` could not accept one; an API integration test
+  exposed that gap. Cache identity also has to be per-variable, so editing one
+  definition does not invalidate already-paid results for other variables.
+  **Completed by:** Codex / GPT-6 / Codex desktop, 2026-09-27; issue #6.
 
 - 2026-09-13 — R1.1 step 2: `codebook.py` reads `variables:` (single-label
   or `multi_label: true` with `min_labels`/`max_labels`/`evidence_granularity`),

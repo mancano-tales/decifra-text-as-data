@@ -10,6 +10,18 @@ Updated live references in code, scripts, and a test comment that still pointed 
 - **Commit message**: "docs(issue-7): point live references to product brief"
 - **Files affected**: `NEWS.md`, `TODO.md`, `scripts/dev.sh`, `scripts/run_v7_tuning_experiments.py`, `src/text_as_data/app.py`, `src/text_as_data/corpus_import.py`, `src/text_as_data/db.py`, `src/text_as_data/disclosure.py`, `src/text_as_data/pilot_v7.py`, `src/text_as_data/providers.py`, `tests/test_corpus_import.py`
 
+## 2026-09-27 — R1.1 step 3: per-variable extraction, estimates and SQLite storage
+
+`run_extraction` now processes every document-variable pair, keeps cache identity scoped to `CodebookVariable.spec_hash`, and stores multi-label selections as codebook-ordered JSON with per-label or per-set evidence verification. Duplicate labels are removed before `max_labels` validation, with the first rationale/evidence retained. SQLite adds the variable/hash/selection columns and a shared `label_set()` view. `/runs/estimate` counts document-variable calls and scales multi-label output estimates by the configured upper bound. The codebook create/update API accepts `variables:` so a synthetic mixed-variable codebook is exercised through estimate, run and result retrieval. The `joint` strategy remains deferred to R1.1 step 8.
+
+Verification: `PYTHONPATH=src` full pytest, **347 passed**; `npm --prefix frontend run lint` passed (three existing React effect warnings); `npm --prefix frontend run build` passed. Issue: [#6](https://github.com/mancano-tales/decifra-text-as-data/issues/6). Plan: `docs/superpowers/plans/2026-09-27-r1.1-step3-extraction-estimate-storage.md`.
+
+**Execution metadata**:
+- **Date**: 2026-09-27
+- **Agent**: Codex / GPT-6 / Codex desktop
+- **Commit message**: "feat(r1.1): run extraction by codebook variable"
+- **Files affected**: `src/text_as_data/{app,codebook,db,estimate,extraction}.py`, `tests/test_{db_migration,extraction_run,mvp_handoff}.py`, `NEWS.md`, `TODO.md`, `docs/ROADMAP.md`, `docs/superpowers/plans/2026-09-27-r1.1-step3-extraction-estimate-storage.md`
+
 ## 2026-09-26 — Governança comum do ecossistema (v2026-09-26d)
 
 Aplicado o bloco de governança comum mantido no hub (`mancano-tales/mancano-repo-hub`, `tools/governanca-comum/`): planos com issue (`tools/plano_issue.py`), base do `NEWS.md` derivada do git (`tools/news_db.py`), aprovação só no chat e no plano, mensagens de agentes como pedido, cabeçalho de agente, branch/PR opcionais, `NEWS.md` junto com a mudança, **datas sem hora** e **exportar conversa só quando o autor pedir**. O bloco fica entre marcadores no `AGENTS.md`; o que é específico deste repositório foi preservado.

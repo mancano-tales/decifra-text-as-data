@@ -943,15 +943,27 @@ class CategorySpec(BaseModel):
     boundary_notes: str = ""
 
 
+class CodebookVariableSpecRequest(BaseModel):
+    name: str
+    description: str
+    categories: list[CategorySpec]
+    multi_label: bool = False
+    min_labels: int | None = None
+    max_labels: int | None = None
+    evidence_granularity: Literal["per_label", "per_set"] | None = None
+
+
 class CodebookSpecRequest(BaseModel):
     concept: str
     description: str
-    categories: list[CategorySpec]
+    categories: list[CategorySpec] | None = None
+    variables: list[CodebookVariableSpecRequest] | None = None
+    prompt_strategy: Literal["per_variable", "joint"] = "per_variable"
 
 
 @app.post("/codebooks")
 def create_codebook(request: CodebookSpecRequest, engine=Depends(get_engine_dependency)):
-    spec = request.model_dump()
+    spec = request.model_dump(exclude_unset=True, exclude_none=True)
     try:
         yaml_raw = spec_to_yaml_string(spec)
     except ValueError as exc:
@@ -988,7 +1000,7 @@ def get_codebook(codebook_id: int, engine=Depends(get_engine_dependency)):
 
 @app.put("/codebooks/{codebook_id}")
 def update_codebook(codebook_id: int, request: CodebookSpecRequest, engine=Depends(get_engine_dependency)):
-    spec = request.model_dump()
+    spec = request.model_dump(exclude_unset=True, exclude_none=True)
     try:
         yaml_raw = spec_to_yaml_string(spec)
     except ValueError as exc:
