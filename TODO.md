@@ -19,7 +19,8 @@
   The author-approved design is in
   `docs/superpowers/specs/2026-09-13-r1.1-multi-variable-and-multi-label-codebooks-design.md`.
   R1.1 steps 1, 2 and 4 are merged; step 3 is implemented on
-  `codex/r1.1-step3` and is being prepared for PR review. Remaining work is
+  `codex/r1.1-step3`; [PR #8](https://github.com/mancano-tales/decifra-text-as-data/pull/8)
+  is open for author review and merge. Remaining work is
   tracked in `docs/ROADMAP.md` R1.1: result and validation API projections,
   frontend support, the optional `joint` strategy, legacy cache backfill,
   and final docs/examples. The original DATALUTA use case has 17 SDG labels
