@@ -60,7 +60,8 @@ def parse_txt_bytes(content: bytes) -> str:
     """Decode a standalone .txt/.md file's bytes into plain text.
 
     Runs `ftfy.fix_text()` on the result -- already a project dependency
-    for exactly this reason (see AGENTS.md's V7 pilot mojibake note): a
+    for exactly this reason (see the V7 mojibake note in the "Real-world
+    pilot data" section of `docs/PRODUCT_BRIEF.md`): a
     document dropped in by a researcher may already be
     Windows-1252-decoded-as-something-else corrupted before it ever
     reaches Decifra, and fixing that once at import time is cheaper than
@@ -87,8 +88,8 @@ def parse_docx_bytes(content: bytes) -> str:
 def parse_pdf_bytes(content: bytes) -> str:
     """Extract plain text from a PDF, page by page, joined by a blank
     line. No OCR: a scanned/image-only PDF yields empty or near-empty
-    text per page, silently -- out of scope per AGENTS.md's explicitly
-    deferred "image/scanned-PDF extraction (OCR)"."""
+    text per page, silently -- image/scanned-PDF extraction (OCR) is out
+    of scope in the "MVP scope" section of `docs/PRODUCT_BRIEF.md`."""
     reader = PdfReader(io.BytesIO(content))
     pages = [page.extract_text() or "" for page in reader.pages]
     return "\n\n".join(p for p in pages if p.strip())

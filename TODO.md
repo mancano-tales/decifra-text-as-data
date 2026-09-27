@@ -2,6 +2,11 @@
 
 ## Pending
 
+- 2026-09-27 — **Issue #7 reference cleanup is in PR review.** Branch
+  `codex/issue-7-product-brief-refs` remains open for the separate PR and
+  awaits the author's review and merge. Created by Codex; completion is
+  recorded after the author merges the PR.
+
 - 2026-09-13 — **Frontend has no automated tests.** The R1.1 step 1 rename
   of `ResultsTable.tsx`/`api.ts` was verified only by `tsc` (via `npm run
   build`) and lint — strong for *references*, blind to *behaviour* (the

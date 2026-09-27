@@ -6,9 +6,9 @@ from .codebook import spec_from_yaml_string
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, RunRecord
 
 # Decifra's own software version isn't tracked as a release number anywhere
-# yet (see AGENTS.md's build-order notes -- this is still pre-1.0, slice by
-# slice); the git commit is the only thing that actually identifies "what
-# code produced this run" today.
+# yet (see "Build order for the MVP" in `docs/PRODUCT_BRIEF.md` -- this is
+# still pre-1.0, slice by slice); the git commit is the only thing that
+# identifies "what code produced this run" today.
 GUIDE_LLM_URL = "https://llm-checklist.com/"
 
 _PARSING_METHOD_BY_PROVIDER_MODE = {
@@ -21,8 +21,8 @@ _PARSING_METHOD_BY_PROVIDER_MODE = {
         "Best-effort: the schema is described in the prompt, not enforced by the "
         "provider. The response is scanned for the first top-level JSON object "
         "that validates against the schema; malformed output is retried up to 3 "
-        "times before the document is recorded as an error row. See AGENTS.md's "
-        "provider layer design for why this mode exists and its known reliability "
+        "times before the document is recorded as an error row. See `docs/PRODUCT_BRIEF.md` "
+        "(Architecture, LLM provider) for why this mode exists and its known reliability "
         "tradeoff versus API-key mode."
     ),
 }
@@ -98,7 +98,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
                 "Per-document categorization is fully automated (unattended batch run, no human review during "
                 "execution). The codebook that defines the categories is human-authored, and Decifra's own design "
                 "treats every automated result as provisional until validated against a human-coded gold sample "
-                "(see AGENTS.md, \"Why the validation step is not optional\") -- see section E for whether that "
+                "(see `docs/PRODUCT_BRIEF.md`, \"Why the validation step is not optional\") -- see section E for whether that "
                 "validation has actually been done for this codebook."
             ),
         },
@@ -139,13 +139,14 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
             "D1_personal_sensitive_data": (
                 "No automatic PII detection, redaction, or anonymization. The document text sent to the "
                 "provider is exactly what was imported into the corpus -- the researcher is responsible for "
-                "screening corpus content before running extraction, per AGENTS.md's stated limits."
+                "screening corpus content for sensitive information before running extraction."
             ),
         },
         "E_output_processing": {
             "E1_human_validation": (
                 "Not recorded for this run: Decifra does not yet persist a link between a run and a human-coded "
-                "gold-label validation result for its codebook (the Validation screen, AGENTS.md's Screen 5, is "
+                "gold-label validation result for its codebook (the Validation screen, described as Screen 5 in "
+                "`docs/PRODUCT_BRIEF.md`, is "
                 "still being built as of this report). Treat this run's output as unvalidated until a kappa/"
                 "precision/recall check against a human-coded sample has actually been run for this codebook."
             ),
