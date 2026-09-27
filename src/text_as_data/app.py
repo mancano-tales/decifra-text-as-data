@@ -113,9 +113,9 @@ def get_provider_dependency(request: CreateRunRequest) -> Provider:
     actually invoked must match what's persisted on the `RunRecord` and
     used as the cache key in `run_extraction`, or both become misleading.
 
-    CLI mode is the agent-agnostic path documented in AGENTS.md's provider
-    layer design: any already-installed CLI that accepts a prompt and
-    returns text works here, not just `claude -p` -- e.g. Google
+    CLI mode is the agent-agnostic path documented in `docs/PRODUCT_BRIEF.md`
+    (Architecture, LLM provider): any already-installed CLI that accepts
+    a prompt and returns text works here, not just `claude -p` -- e.g. Google
     Antigravity's `agy -p "<prompt>"`, which (unlike `claude -p`) requires
     the prompt as a trailing argument rather than reading stdin, hence
     `cli_prompt_mode`."""

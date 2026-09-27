@@ -125,6 +125,13 @@
 
 ## Done
 
+- 2026-09-27 — **Issue #7: point live product brief references to
+  `docs/PRODUCT_BRIEF.md`.** Updated live code, script, and test-comment
+  references; kept the source reference to `AGENTS.md` that still points to
+  an active repository rule. [PR #9](https://github.com/mancano-tales/decifra-text-as-data/pull/9)
+  merged. **Completed by:** Codex / GPT-6 / Codex desktop, 2026-09-27;
+  issue #7.
+
 - 2026-09-27 — **R1.1 step 3: extraction, estimates and SQLite consume `Codebook.variables`.**
   A run now writes one extraction per document-variable pair; each cache key
   uses that variable's `spec_hash` plus the codebook/model/provider and

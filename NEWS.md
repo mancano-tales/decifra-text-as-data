@@ -1,5 +1,15 @@
 # NEWS
 
+## 2026-09-27 — Point live product brief references to docs/PRODUCT_BRIEF.md
+
+Updated live references in code, scripts, and a test comment that still pointed to product material in `AGENTS.md`. They now point to the corresponding sections in `docs/PRODUCT_BRIEF.md`. Kept the `AGENTS.md` reference in `pilot_v7.py` because it points to the active codebook-engine rule, which remains in that file. The disclosure text no longer attributes personal-data screening guidance to a stale instruction section.
+
+**Execution metadata**:
+- **Date**: 2026-09-27
+- **Agent**: Codex / GPT-6 / Codex desktop
+- **Commit message**: "docs(issue-7): point live references to product brief"
+- **Files affected**: `NEWS.md`, `TODO.md`, `scripts/dev.sh`, `scripts/run_v7_tuning_experiments.py`, `src/text_as_data/app.py`, `src/text_as_data/corpus_import.py`, `src/text_as_data/db.py`, `src/text_as_data/disclosure.py`, `src/text_as_data/pilot_v7.py`, `src/text_as_data/providers.py`, `tests/test_corpus_import.py`
+
 ## 2026-09-27 — R1.1 step 3: per-variable extraction, estimates and SQLite storage
 
 `run_extraction` now processes every document-variable pair, keeps cache identity scoped to `CodebookVariable.spec_hash`, and stores multi-label selections as codebook-ordered JSON with per-label or per-set evidence verification. Duplicate labels are removed before `max_labels` validation, with the first rationale/evidence retained. SQLite adds the variable/hash/selection columns and a shared `label_set()` view. `/runs/estimate` counts document-variable calls and scales multi-label output estimates by the configured upper bound. The codebook create/update API accepts `variables:` so a synthetic mixed-variable codebook is exercised through estimate, run and result retrieval. The `joint` strategy remains deferred to R1.1 step 8.
