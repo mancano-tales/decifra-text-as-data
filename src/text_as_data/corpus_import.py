@@ -43,7 +43,7 @@ def parse_xlsx_rows(content: bytes) -> list[dict]:
         raise ValueError("worksheet has no header row (the file appears to be empty)") from None
     if any(name is None for name in header):
         # A `None`-named column (an unlabeled header cell) would otherwise
-        # produce a `None`-keyed row dict; `app.py`'s `_rows_to_texts` later
+        # produce a `None`-keyed row dict; `app.py`'s `_require_column` later
         # does `sorted(rows[0].keys())`, and sorting a mix of `str` and
         # `None` raises `TypeError` -- fail with a clear message here
         # instead of that opaque 500 downstream.
