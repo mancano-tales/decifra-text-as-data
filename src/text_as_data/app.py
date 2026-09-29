@@ -245,7 +245,8 @@ def get_run(run_id: int, engine=Depends(get_engine_dependency)):
 def _extraction_with_snippet(session: Session, extraction: ExtractionRecord) -> dict:
     document = session.get(DocumentRecord, extraction.document_id)
     snippet = document.text[:160] if document else ""
-    return {**extraction.model_dump(), "document_snippet": snippet}
+    external_id = document.external_id if document else None
+    return {**extraction.model_dump(), "document_external_id": external_id, "document_snippet": snippet}
 
 
 _SQLITE_MAX_IN_CLAUSE = 500
@@ -268,7 +269,15 @@ def _extractions_with_snippets(session: Session, extractions: list[ExtractionRec
         chunk = document_ids[i : i + _SQLITE_MAX_IN_CLAUSE]
         documents.extend(session.exec(select(DocumentRecord).where(DocumentRecord.id.in_(chunk))).all())
     snippets = {d.id: d.text[:160] for d in documents}
-    return [{**e.model_dump(), "document_snippet": snippets.get(e.document_id, "")} for e in extractions]
+    external_ids = {d.id: d.external_id for d in documents}
+    return [
+        {
+            **e.model_dump(),
+            "document_external_id": external_ids.get(e.document_id),
+            "document_snippet": snippets.get(e.document_id, ""),
+        }
+        for e in extractions
+    ]
 
 
 @app.get("/runs/{run_id}/results")
@@ -329,7 +338,12 @@ async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=D
     nothing on validity -- a non-blank value that isn't one of the
     codebook's real category labels rejects the whole upload with every
     bad row listed, since a silently-accepted typo would corrupt the gold
-    set for every future validation report against this codebook."""
+    set for every future validation report against this codebook.
+
+    Rows are matched by `document_id` (Decifra's own id) or, when that
+    cell or column is absent, by `document_external_id` -- the caller's id
+    given as `id_column` on import -- resolved within the run's corpus. A
+    caller that keeps its own ids never has to translate them back."""
     with Session(engine) as session:
         run = session.get(RunRecord, run_id)
         if run is None:
@@ -337,18 +351,25 @@ async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=D
 
         codebook = session.get(CodebookRecord, run.codebook_id)
         valid_labels = {c["label"] for c in spec_from_yaml_string(codebook.yaml_raw)["categories"]}
+        corpus_documents = session.exec(
+            select(DocumentRecord).where(
+                DocumentRecord.corpus_id == run.corpus_id, DocumentRecord.external_id.is_not(None)
+            )
+        ).all()
+        by_external_id = {d.external_id: d.id for d in corpus_documents}
 
     content = await file.read()
     try:
         rows = parse_csv_rows(content)
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail=f"could not decode file as UTF-8: {exc}") from exc
-    if not rows or "document_id" not in rows[0] or "gold_category" not in rows[0]:
+    has_id_column = bool(rows) and ("document_id" in rows[0] or "document_external_id" in rows[0])
+    if not rows or not has_id_column or "gold_category" not in rows[0]:
         raise HTTPException(
             status_code=422,
-            detail="file must have 'document_id' and 'gold_category' columns "
-            "(export a run's results and add a gold_category column to it; "
-            "the column was named gold_categoria before 2026-09-13)",
+            detail="file must have a 'gold_category' column and a 'document_id' or "
+            "'document_external_id' column (export a run's results and add a gold_category "
+            "column to it; the column was named gold_categoria before 2026-09-13)",
         )
 
     to_import: list[tuple[int, str]] = []
@@ -359,13 +380,25 @@ async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=D
         if not value:
             skipped_blank += 1
             continue
+        internal = (row.get("document_id") or "").strip()
+        external = (row.get("document_external_id") or "").strip()
+        label = f"document_id {internal}" if internal else f"document_external_id {external!r}"
         if value not in valid_labels:
-            bad_rows.append(f"document_id {row['document_id']}: {value!r} is not a valid category")
+            bad_rows.append(f"{label}: {value!r} is not a valid category")
             continue
-        try:
-            document_id = int(row["document_id"])
-        except (TypeError, ValueError):
-            bad_rows.append(f"document_id {row['document_id']!r} is not a valid integer")
+        if internal:
+            try:
+                document_id = int(internal)
+            except ValueError:
+                bad_rows.append(f"document_id {internal!r} is not a valid integer")
+                continue
+        elif external:
+            if external not in by_external_id:
+                bad_rows.append(f"document_external_id {external!r} is not in this run's corpus")
+                continue
+            document_id = by_external_id[external]
+        else:
+            bad_rows.append(f"row labeled {value!r} has neither document_id nor document_external_id")
             continue
         to_import.append((document_id, value))
 
@@ -583,16 +616,18 @@ class PasteCorpusRequest(BaseModel):
     text: str
 
 
-def _create_documents_or_409(engine, name: str, texts: list[str]) -> dict:
+def _create_documents_or_409(engine, name: str, documents: list[tuple[str, str | None]]) -> dict:
+    """`documents` holds `(text, external_id)` pairs; `external_id` is
+    `None` unless the caller named an id column on import."""
     with Session(engine) as session:
         existing = session.exec(select(DocumentRecord).where(DocumentRecord.corpus_id == name)).first()
         if existing is not None:
             raise HTTPException(status_code=409, detail=f"corpus {name!r} already exists")
 
         inserted = 0
-        for text in texts:
+        for text, external_id in documents:
             if text:
-                session.add(DocumentRecord(corpus_id=name, text=text))
+                session.add(DocumentRecord(corpus_id=name, text=text, external_id=external_id))
                 inserted += 1
         if inserted == 0:
             # Every text was empty (e.g. a CSV/XLSX whose text_column was
@@ -612,13 +647,11 @@ def _create_documents_or_409(engine, name: str, texts: list[str]) -> dict:
 
 @app.post("/corpora/paste")
 def create_corpus_from_paste(request: PasteCorpusRequest, engine=Depends(get_engine_dependency)):
-    return _create_documents_or_409(engine, request.name, [request.text])
+    return _create_documents_or_409(engine, request.name, [(request.text, None)])
 
 
-def _rows_to_texts(rows: list[dict], text_column: str) -> list[str]:
-    if not rows:
-        raise HTTPException(status_code=400, detail="file has no data rows")
-    if text_column not in rows[0]:
+def _require_column(rows: list[dict], column: str) -> None:
+    if column not in rows[0]:
         # csv.DictReader collects any columns beyond the header count under
         # a `None` key (its `restkey`, for a data row with more fields than
         # the header) -- sorting a mix of `str` and `None` raises a raw
@@ -626,17 +659,67 @@ def _rows_to_texts(rows: list[dict], text_column: str) -> list[str]:
         available = sorted(k for k in rows[0].keys() if k is not None)
         raise HTTPException(
             status_code=422,
-            detail=f"column {text_column!r} not found; available columns: {available}",
+            detail=f"column {column!r} not found; available columns: {available}",
         )
-    # `is not None` and a stripped non-empty check, not bare truthiness --
-    # `row.get(text_column)` is falsy for a legitimate numeric `0`/`0.0`
-    # cell (openpyxl returns XLSX numeric cells as int/float, not str),
-    # and a bare `if row.get(text_column)` silently dropped those rows.
-    return [
-        str(row[text_column])
-        for row in rows
-        if row.get(text_column) is not None and str(row[text_column]).strip() != ""
-    ]
+
+
+def _cell_to_id(value) -> str:
+    """openpyxl returns XLSX numeric cells as int/float, so an id column
+    holding `101` could come back as `101.0` -- a different key from the
+    caller's `101`. Integral floats are written as integers."""
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return "" if value is None else str(value).strip()
+
+
+def _rows_to_documents(
+    rows: list[dict], text_column: str, id_column: str | None = None
+) -> list[tuple[str, str | None]]:
+    """`(text, external_id)` pairs for the rows whose text is not blank.
+
+    With `id_column`, every kept row must carry a non-blank id that is
+    unique in the file. The id is the caller's only join key back to its
+    own rows (first external user: bbsia-radar, issue #4), so a blank or
+    repeated id is rejected before anything is written, instead of
+    producing a corpus whose results cannot be matched unambiguously.
+    Rows dropped for blank text are ignored, ids included."""
+    if not rows:
+        raise HTTPException(status_code=400, detail="file has no data rows")
+    _require_column(rows, text_column)
+    if id_column is not None:
+        _require_column(rows, id_column)
+
+    documents: list[tuple[str, str | None]] = []
+    blank_id_lines: list[int] = []
+    seen: set[str] = set()
+    repeated: set[str] = set()
+    # start=2: line 1 is the header, so this is the line number a
+    # researcher sees in the spreadsheet.
+    for line, row in enumerate(rows, start=2):
+        # `is not None` and a stripped non-empty check, not bare truthiness --
+        # `row.get(text_column)` is falsy for a legitimate numeric `0`/`0.0`
+        # cell (openpyxl returns XLSX numeric cells as int/float, not str),
+        # and a bare `if row.get(text_column)` silently dropped those rows.
+        if row.get(text_column) is None or str(row[text_column]).strip() == "":
+            continue
+        external_id = None
+        if id_column is not None:
+            external_id = _cell_to_id(row.get(id_column))
+            if not external_id:
+                blank_id_lines.append(line)
+            elif external_id in seen:
+                repeated.add(external_id)
+            seen.add(external_id)
+        documents.append((str(row[text_column]), external_id))
+
+    problems = []
+    if blank_id_lines:
+        problems.append(f"blank {id_column!r} on line(s) {blank_id_lines[:10]}")
+    if repeated:
+        problems.append(f"repeated {id_column!r} value(s) {sorted(repeated)[:10]}")
+    if problems:
+        raise HTTPException(status_code=422, detail="; ".join(problems))
+    return documents
 
 
 @app.post("/corpora/csv")
@@ -644,6 +727,7 @@ async def create_corpus_from_csv(
     name: str = Form(...),
     text_column: str = Form(...),
     file: UploadFile = File(...),
+    id_column: str | None = Form(None),
     engine=Depends(get_engine_dependency),
 ):
     content = await file.read()
@@ -651,8 +735,8 @@ async def create_corpus_from_csv(
         rows = parse_csv_rows(content)
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail=f"could not decode file as UTF-8: {exc}") from exc
-    texts = _rows_to_texts(rows, text_column)
-    return _create_documents_or_409(engine, name, texts)
+    documents = _rows_to_documents(rows, text_column, id_column or None)
+    return _create_documents_or_409(engine, name, documents)
 
 
 @app.post("/corpora/xlsx")
@@ -660,6 +744,7 @@ async def create_corpus_from_xlsx(
     name: str = Form(...),
     text_column: str = Form(...),
     file: UploadFile = File(...),
+    id_column: str | None = Form(None),
     engine=Depends(get_engine_dependency),
 ):
     content = await file.read()
@@ -667,8 +752,8 @@ async def create_corpus_from_xlsx(
         rows = parse_xlsx_rows(content)
     except Exception as exc:  # noqa: BLE001 -- any openpyxl parse failure means "not a valid xlsx"
         raise HTTPException(status_code=400, detail=f"could not parse file as XLSX: {exc}") from exc
-    texts = _rows_to_texts(rows, text_column)
-    return _create_documents_or_409(engine, name, texts)
+    documents = _rows_to_documents(rows, text_column, id_column or None)
+    return _create_documents_or_409(engine, name, documents)
 
 
 _DOCUMENT_PARSERS = {

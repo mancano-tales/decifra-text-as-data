@@ -162,6 +162,8 @@ export interface ExtractionResult {
   rationale: string;
   evidence_span: string;
   tokens_used: number | null;
+  // Caller's own id, set when the corpus was imported with `id_column`.
+  document_external_id: string | null;
   document_snippet: string;
   evidence_verified: boolean;
   evidence_match_tier: string;
