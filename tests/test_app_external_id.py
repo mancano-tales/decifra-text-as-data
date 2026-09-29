@@ -247,3 +247,43 @@ def test_gold_labels_still_require_an_id_column():
 
     assert response.status_code == 422
     assert "document_external_id" in response.json()["detail"]
+
+
+def test_gold_labels_round_trip_ids_that_the_export_defuses_as_formulas():
+    """The CSV export prefixes `-1` with an apostrophe (CSV-injection guard).
+    Re-uploading that exported value as a gold key must still match `-1`."""
+    client, engine = _client()
+    _upload_csv(client, b"id,text\n-1,one\n@team,two\n", id_column="id")
+    run_id = _run(client)
+    exported = client.get(f"/runs/{run_id}/export?format=csv").content.decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(exported)))
+    assert sorted(r["document_external_id"] for r in rows) == ["'-1", "'@team"]
+    gold = "document_external_id,gold_category\n" + "".join(
+        f"{r['document_external_id']},protest\n" for r in rows
+    )
+
+    response = client.post(
+        f"/runs/{run_id}/gold-labels", files={"file": ("gold.csv", gold.encode(), "text/csv")}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["imported"] == 2
+    with Session(engine) as session:
+        labeled = {session.get(DocumentRecord, label.document_id).external_id for label in session.exec(select(HumanLabelRecord))}
+        assert labeled == {"-1", "@team"}
+
+
+def test_blank_id_errors_count_data_rows_not_spreadsheet_lines():
+    """The XLSX parser drops fully empty rows, so errors name the position
+    among data rows instead of a spreadsheet line that would be off."""
+    client, _ = _client()
+    content = _xlsx([["id", "text"], ["a", "one"], [None, None], [None, "two"]])
+
+    response = client.post(
+        "/corpora/xlsx",
+        data={"name": "radar", "text_column": "text", "id_column": "id"},
+        files={"file": ("corpus.xlsx", content, "application/octet-stream")},
+    )
+
+    assert response.status_code == 422
+    assert "data row(s) [2]" in response.json()["detail"]

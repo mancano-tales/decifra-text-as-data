@@ -18,7 +18,7 @@ from .codebook import spec_from_yaml_string, spec_to_yaml_string
 from .corpus_import import parse_csv_rows, parse_docx_bytes, parse_pdf_bytes, parse_txt_bytes, parse_xlsx_rows
 from .db import CodebookRecord, DocumentRecord, ExtractionRecord, HumanLabelRecord, RunRecord, get_engine
 from .disclosure import build_disclosure
-from .export import results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
+from .export import _defuse_formula, results_to_csv_bytes, results_to_json_bytes, results_to_xlsx_bytes
 from .extraction import run_extraction
 from .providers import CliProvider, Provider, make_api_key_provider
 from .validation import agreement_report, reproducibility_report
@@ -330,6 +330,20 @@ def update_extraction(
         return _extraction_with_snippet(session, extraction)
 
 
+def _undo_formula_defuse(external_id: str, known: dict) -> str:
+    """CSV/XLSX exports prefix a value starting with `=`, `+`, `-` or `@`
+    with an apostrophe (`export._defuse_formula`, CWE-1236). An id such as
+    `-1` therefore comes back from an exported and re-edited gold file as
+    `'-1`. Strip that apostrophe only when the id is otherwise unknown and
+    the stripped value is a known id that the export would have defused."""
+    if external_id in known or not external_id.startswith("'"):
+        return external_id
+    candidate = external_id[1:]
+    if candidate in known and _defuse_formula(candidate) == external_id:
+        return candidate
+    return external_id
+
+
 @app.post("/runs/{run_id}/gold-labels")
 async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=Depends(get_engine_dependency)):
     """Upload hand-reviewed gold labels for a run, from a CSV shaped like
@@ -393,6 +407,7 @@ async def upload_gold_labels(run_id: int, file: UploadFile = File(...), engine=D
                 bad_rows.append(f"document_id {internal!r} is not a valid integer")
                 continue
         elif external:
+            external = _undo_formula_defuse(external, by_external_id)
             if external not in by_external_id:
                 bad_rows.append(f"document_external_id {external!r} is not in this run's corpus")
                 continue
@@ -693,9 +708,10 @@ def _rows_to_documents(
     blank_id_lines: list[int] = []
     seen: set[str] = set()
     repeated: set[str] = set()
-    # start=2: line 1 is the header, so this is the line number a
-    # researcher sees in the spreadsheet.
-    for line, row in enumerate(rows, start=2):
+    # Numbered among data rows, from 1. Not a spreadsheet line number: the
+    # XLSX parser drops fully empty rows before this point, so a line
+    # number would point above the cell the researcher has to fix.
+    for line, row in enumerate(rows, start=1):
         # `is not None` and a stripped non-empty check, not bare truthiness --
         # `row.get(text_column)` is falsy for a legitimate numeric `0`/`0.0`
         # cell (openpyxl returns XLSX numeric cells as int/float, not str),
@@ -714,7 +730,10 @@ def _rows_to_documents(
 
     problems = []
     if blank_id_lines:
-        problems.append(f"blank {id_column!r} on line(s) {blank_id_lines[:10]}")
+        problems.append(
+            f"blank {id_column!r} on data row(s) {blank_id_lines[:10]} "
+            "(1 = first non-empty row after the header)"
+        )
     if repeated:
         problems.append(f"repeated {id_column!r} value(s) {sorted(repeated)[:10]}")
     if problems:
