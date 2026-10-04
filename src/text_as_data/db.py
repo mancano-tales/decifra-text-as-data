@@ -79,6 +79,7 @@ class RunRecord(SQLModel, table=True):
     # for a run recording its own provenance.
     provider_mode: str = "api_key"  # "api_key" | "cli"
     provider_detail: str = ""  # the model id (api_key mode) or CLI command (cli mode)
+    cli_timeout_seconds: int | None = None  # per-call CLI timeout (cli mode); issue #11
     # sha256 of the CodebookRecord.yaml_raw actually used by this run,
     # filled in by run_extraction once it loads the codebook. Caching in
     # extraction.py matches on this, not on codebook_id alone -- codebooks
