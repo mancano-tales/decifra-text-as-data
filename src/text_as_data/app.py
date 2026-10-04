@@ -9,7 +9,7 @@ from typing import Literal
 import pandas as pd
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel, Field, SecretStr
 from sqlmodel import Session, delete, select
 
 from .config import Settings, api_key, credential_status, read_settings, save_api_key, save_settings
@@ -78,6 +78,10 @@ class CreateRunRequest(BaseModel):
     provider_mode: Literal["api_key", "cli"] = "api_key"
     cli_command: list[str] | None = None
     cli_prompt_mode: Literal["stdin", "arg"] = "stdin"
+    # Seconds a single CLI call may take before it is killed (CLI mode only).
+    # The default keeps the previous fixed value; slow high-effort models on
+    # long documents need more (issue #11). Recorded on the RunRecord.
+    cli_timeout_seconds: int = Field(180, ge=10, le=3600)
     # Set true to verify reproducibility: re-run against the same
     # codebook/corpus/model as an earlier run without serving that run's
     # cached extractions back. See GET /runs/{run_id}/reproducibility.
@@ -122,7 +126,8 @@ def get_provider_dependency(request: CreateRunRequest) -> Provider:
     if request.provider_mode == "cli":
         if not request.cli_command:
             raise HTTPException(status_code=422, detail="cli_command is required when provider_mode is 'cli'")
-        return CliProvider(command=request.cli_command, prompt_mode=request.cli_prompt_mode)
+        return CliProvider(command=request.cli_command, prompt_mode=request.cli_prompt_mode,
+                           timeout=request.cli_timeout_seconds)
     vendor = _vendor_for_model(request.model)
     key = api_key(vendor)
     if not key:
@@ -220,6 +225,7 @@ def create_run(
             provider_mode=request.provider_mode,
             provider_detail=provider_detail,
             bypass_cache=request.bypass_cache,
+            cli_timeout_seconds=request.cli_timeout_seconds if request.provider_mode == "cli" else None,
         )
         session.add(run)
         session.commit()
@@ -601,6 +607,15 @@ def get_run_reproducibility(run_id: int, compare_to: int, engine=Depends(get_eng
                     "(codebook_id, corpus_id, and model must all match) -- comparing them would "
                     "measure 'are these two different setups different', not reproducibility"
                 ),
+            )
+        if run_a.cli_timeout_seconds != run_b.cli_timeout_seconds:
+            # A shorter timeout turns slow calls into __error__ rows that the
+            # longer run answers, which would read as output instability.
+            raise HTTPException(
+                status_code=422,
+                detail=f"runs {run_id} and {compare_to} used different CLI timeouts "
+                f"({run_a.cli_timeout_seconds} vs {run_b.cli_timeout_seconds} seconds) -- "
+                "not a same-configuration repeat",
             )
         if run_a.codebook_yaml_hash and run_b.codebook_yaml_hash and run_a.codebook_yaml_hash != run_b.codebook_yaml_hash:
             raise HTTPException(

@@ -88,6 +88,7 @@ def extract(
 import hashlib
 import json
 import logging
+import subprocess
 
 from sqlmodel import Session, select
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -240,7 +241,12 @@ def run_extraction(engine, run_id: int, provider: Provider, include_persona: boo
                                 evidence_match_tier = "per_label" if selections else "none_selected"
                                 selections_json = json.dumps(selections, ensure_ascii=False)
                         except Exception as exc:  # noqa: BLE001 -- one variable must not kill a run
-                            error_message = str(exc)
+                            # TimeoutExpired's own message repeats the whole
+                            # command line, prompt included (issue #11).
+                            if isinstance(exc, subprocess.TimeoutExpired):
+                                error_message = f"CLI timed out after {exc.timeout:g} seconds"
+                            else:
+                                error_message = str(exc)
                             if len(error_message) > 2000:
                                 error_message = error_message[:2000] + "... [truncated]"
                             category, rationale, evidence_span = ERROR_CATEGORY, error_message, ""

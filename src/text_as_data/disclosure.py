@@ -107,6 +107,7 @@ def build_disclosure(session: Session, run: RunRecord) -> dict:
                 "model": run.model,
                 "provider_mode": run.provider_mode,
                 "provider_detail": run.provider_detail,
+                "cli_timeout_seconds": run.cli_timeout_seconds,
                 "run_created_at": run.created_at.isoformat() if run.created_at else None,
                 "cifra_git_commit": _git_commit(),
             },
