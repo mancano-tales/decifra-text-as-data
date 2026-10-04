@@ -608,6 +608,15 @@ def get_run_reproducibility(run_id: int, compare_to: int, engine=Depends(get_eng
                     "measure 'are these two different setups different', not reproducibility"
                 ),
             )
+        if run_a.cli_timeout_seconds != run_b.cli_timeout_seconds:
+            # A shorter timeout turns slow calls into __error__ rows that the
+            # longer run answers, which would read as output instability.
+            raise HTTPException(
+                status_code=422,
+                detail=f"runs {run_id} and {compare_to} used different CLI timeouts "
+                f"({run_a.cli_timeout_seconds} vs {run_b.cli_timeout_seconds} seconds) -- "
+                "not a same-configuration repeat",
+            )
         if run_a.codebook_yaml_hash and run_b.codebook_yaml_hash and run_a.codebook_yaml_hash != run_b.codebook_yaml_hash:
             raise HTTPException(
                 status_code=422,

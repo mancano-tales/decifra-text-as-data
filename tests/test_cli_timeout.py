@@ -69,3 +69,24 @@ def test_timeout_is_recorded_on_the_run_and_stored_as_a_short_error():
     assert row.category == ERROR_CATEGORY
     assert row.rationale == "CLI timed out after 42 seconds"
     assert "xxxx" not in row.rationale
+
+
+def test_reproducibility_refuses_runs_with_different_timeouts_and_disclosure_reports_it():
+    engine = get_engine("sqlite://")
+    app.dependency_overrides[get_engine_dependency] = lambda: engine
+    app.dependency_overrides[get_provider_dependency] = lambda: TimingOutProvider()
+    try:
+        client = TestClient(app)
+        codebook_id = client.post("/codebooks", json=SPEC).json()["id"]
+        client.post("/corpora/paste", json={"name": "c", "text": "document"})
+        base = {"codebook_id": codebook_id, "corpus_id": "c", "model": "m", "provider_mode": "cli",
+                "cli_command": ["agy", "-p"]}
+        a = client.post("/runs", json={**base, "cli_timeout_seconds": 60}).json()["run_id"]
+        b = client.post("/runs", json={**base, "cli_timeout_seconds": 300, "bypass_cache": True}).json()["run_id"]
+        response = client.get(f"/runs/{a}/reproducibility", params={"compare_to": b})
+        disclosure = client.get(f"/runs/{a}/disclosure").json()
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 422
+    assert "timeouts" in response.json()["detail"]
+    assert disclosure["B_model_and_access_details"]["B1_model_name_provider_version_date"]["cli_timeout_seconds"] == 60
